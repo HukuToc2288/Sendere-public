@@ -1,17 +1,23 @@
 package SendereCommons;
 
+import java.io.File;
+
 public abstract class TransmissionOut {
 
     public final RemoteUser user;
-    public final String rootFile;
+    public final String rooDirectory;
+    public final String filename;
     public final int number;
-    private String currentRelativePath;
+    public final boolean isDirectory;
     private final Object pauseLock = new Object();
     protected boolean stop;
 
-    public TransmissionOut(RemoteUser user, int id, String rootFile){
+    public TransmissionOut(RemoteUser user, boolean isDirectory, int id, String path){
         this.user = user;
-        this.rootFile = rootFile;
+        File file = new File(path);
+        this.rooDirectory = file.getParent();
+        filename = file.getName();
+        this.isDirectory = isDirectory;
         number = id;
     }
 
@@ -22,14 +28,6 @@ public abstract class TransmissionOut {
     public abstract void onFail();
 
     public abstract void onSuccess();
-
-    public void setCurrentRelativePath(String currentRelativePath) {
-        this.currentRelativePath = currentRelativePath;
-    }
-
-    public String getCurrentRelativePath() {
-        return currentRelativePath;
-    }
 
     public void waitForResponse(){
         synchronized (pauseLock) {

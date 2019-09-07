@@ -15,7 +15,7 @@ public class NetworkList {
 
     public static void updateList() throws SocketException {
         ArrayList<NetworkInterface> nets = Collections.list(NetworkInterface.getNetworkInterfaces());
-        ArrayList<SimpleNetworkInterface> networkInterfaceArray = new ArrayList<>();
+        ArrayList<SimpleNetworkInterface> networkInterfaceArray = new ArrayList<SimpleNetworkInterface>();
         for (int i = 0; i<nets.size(); i++){
             ArrayList<InetAddress> inetAddresses = Collections.list(nets.get(i).getInetAddresses());
             if(inetAddresses.size()==0 || !hasIp4address(inetAddresses))

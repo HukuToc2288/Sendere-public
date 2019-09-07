@@ -12,7 +12,7 @@ public class RemoteUser {
     public RemoteUser(String nickname, long hash, String address, int port){
         this.nickname = nickname;
         this.hash = hash;
-        addresses = new HashSet<>();
+        addresses = new HashSet<String>();
         addAddress(address);
         setPort(port);
     }
@@ -31,5 +31,10 @@ public class RemoteUser {
 
     public int getPort() {
         return port;
+    }
+
+    @Override
+    public String toString() {
+        return nickname;
     }
 }

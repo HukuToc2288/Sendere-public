@@ -51,9 +51,19 @@ public class Main {
 
             @Override
             public void onSendRequest(InRequest request) {
-                println(String.format("Пользователь %1$s хочет передать вам %2$s %3$s. Принять?"));
+                println(String.format("Пользователь %1$s хочет передать вам %2$s %3$s. Принять?", request.who, request.isDirectory ? "директорию" : "файл", request.filename));
                 tempInRequest = request;
                 question = true;
+            }
+
+            @Override
+            public void onSendResponse(boolean allow, TransmissionOut transmission) {
+                if(allow){
+                    println("Передача "+transmission.number+" начата");
+                    transmission.start();
+                }else {
+                    println("Передача "+transmission.number+" отклонена");
+                }
             }
         };
         println("Sendere запущен на порту "+sendere.getMainPort());
@@ -136,12 +146,37 @@ public class Main {
                             println("Приём начат с идентификатором " + transmission.number);
                         } else if (line.equals("no")) {
                             question = false;
-                            sendere.processSendRequest(false, null);
+                            sendere.processSendRequest(false, new TransmissionIn(tempInRequest.who, tempInRequest.transmissionId) {
+                                @Override
+                                public boolean createDirectory(String relativePath) {
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean createFile(String relativePath) {
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean writeToFile(byte[] data) {
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean closeFile() {
+                                    return false;
+                                }
+
+                                @Override
+                                public void onUpdateTransmissionSize(long size) {
+
+                                }
+                            });
                             println("Приём отклонён");
                         } else {
                             println("Ответьте yes или no");
                         }
-                        return;
+                        continue;
                     }
                     if (line.equals("/who")) {
                         if (sendere.getRemoteUsers().size() == 0) {
@@ -185,11 +220,11 @@ public class Main {
                             continue;
                         }
                         //Надо переделать расчёт номера передачи
-                        TransmissionOut transmission = new TransmissionOut(tempUser, (int)(System.currentTimeMillis()), split[2]) {
+                        TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), (int)(System.currentTimeMillis()), split[2]) {
 
                             @Override
                             public void start() {
-                                recursiveSend("");
+                                recursiveSend(filename);
                             }
 
                             @Override
@@ -210,7 +245,7 @@ public class Main {
                             }
 
                             private void recursiveSend(String currentRelativePath){
-                                File file = new File(rootFile+(currentRelativePath.equals("") ? "" : "/")+currentRelativePath);
+                                File file = new File(rooDirectory+ "/" +currentRelativePath);
                                 if(!file.exists())
                                     return;
                                 if(file.isDirectory()){
@@ -223,6 +258,8 @@ public class Main {
                                     }
                                 }else {
                                     try {
+                                        sendere.createRemoteFile(currentRelativePath, this);
+                                        waitForResponse();
                                         FileInputStream in = new FileInputStream(file);
                                         byte data[] = new byte[1024*1024];
                                         int dataLength;
@@ -243,7 +280,8 @@ public class Main {
                                 }
                             }
                         };
-                        sendere.startTransmissionOut(transmission);
+                        sendere.addTransmissionOut(transmission);
+                        sendere.sendTransmissionRequest(transmission);
                     } else {
                         println("Команда не распознана");
                         println("");
