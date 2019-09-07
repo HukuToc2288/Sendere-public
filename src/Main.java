@@ -25,7 +25,7 @@ public class Main {
             NetworkList.updateList();
         } catch (SocketException e) {
             e.printStackTrace();
-            println("Ваше устройство не педключено ни к одной сети.");
+            println("Ваше устройство не педключено ни к одной сети");
         }
         println("Инициализация сервиса...");
         sendere = new Sendere() {
