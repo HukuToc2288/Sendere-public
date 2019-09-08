@@ -20,5 +20,5 @@ public class Settings {
      * Directory where received files will be placed
      * Path has to be in UNIX style
      */
-    public static String receivedDir = ".";
+    public static String receivedDir = System.getProperty("user.home");
 }
