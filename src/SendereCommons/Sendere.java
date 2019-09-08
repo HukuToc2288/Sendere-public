@@ -19,7 +19,7 @@ public abstract class Sendere {
      * Size in bytes of oncoming and incoming messages that should be used instead of
      * hardcoded value.
      */
-    public static final int PACKET_LENGTH = 1023;
+    public static final int PACKET_LENGTH = 1024*33;
 
     private int mainPort;
     public final long HASH;
