@@ -96,7 +96,13 @@ public abstract class Sendere {
             if (transmission != null) {
                 if (receivedMessage[1].equals(Headers.TRUE)) {
                     onSendResponse(true, transmission);
-                    transmission.start();
+                    Thread transmissionThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            transmission.start();
+                        }
+                    });
+                    transmissionThread.start();
                 } else {
                     onSendResponse(false, transmission);
                     transmissionsOut.remove(Integer.parseInt(receivedMessage[2]));

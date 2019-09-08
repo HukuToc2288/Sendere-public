@@ -219,6 +219,12 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
+
+                        if(!new File(split[2]).exists()){
+                            println(String.format("Файла %1$s не существует", split[2]));
+                            continue;
+                        }
+
                         //Надо переделать расчёт номера передачи
                         TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), (int)(System.currentTimeMillis()), split[2]) {
 
