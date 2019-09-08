@@ -60,7 +60,6 @@ public class Main {
             public void onSendResponse(boolean allow, TransmissionOut transmission) {
                 if(allow){
                     println("Передача "+transmission.number+" начата");
-                    transmission.start();
                 }else {
                     println("Передача "+transmission.number+" отклонена");
                 }
