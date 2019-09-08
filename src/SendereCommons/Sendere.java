@@ -129,8 +129,10 @@ public abstract class Sendere {
                 sendMessage(Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.closeFile() ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
         } else if (receivedMessage[0].equals(Headers.SEND_COMPLETE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
-            if (transmission != null)
-                sendMessage(Headers.SEND_FEEDBACK + (transmission.closeFile() ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
+            if (transmission != null) {
+                transmission.onDone();
+                transmissionsIn.remove(transmission.number);
+            }
         } else if (receivedMessage[0].equals(Headers.SEND_FEEDBACK)) {
             TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {

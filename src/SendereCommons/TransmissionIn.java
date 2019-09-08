@@ -55,6 +55,8 @@ public abstract class TransmissionIn {
      */
     public abstract void onUpdateTransmissionSize(long size);
 
+    public abstract void onDone();
+
     public void setCurrentRelativePath(String currentRelativePath) {
         this.currentRelativePath = currentRelativePath;
     }

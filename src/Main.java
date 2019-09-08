@@ -139,6 +139,11 @@ public class Main {
                                 public void onUpdateTransmissionSize(long size) {
 
                                 }
+
+                                @Override
+                                public void onDone() {
+                                    println(String.format("Приём %1$d успешно завершён", number));
+                                }
                             };
 
                             sendere.processSendRequest(true, transmission);
@@ -169,6 +174,10 @@ public class Main {
                                 @Override
                                 public void onUpdateTransmissionSize(long size) {
 
+                                }
+
+                                @Override
+                                public void onDone() {
                                 }
                             });
                             println("Приём отклонён");
@@ -230,11 +239,13 @@ public class Main {
                             @Override
                             public void start() {
                                 recursiveSend(filename);
+                                onSuccess();
                             }
 
                             @Override
                             public void onIntermediateSuccess() {
                                 resume();
+                                System.out.print("*");
                             }
 
                             @Override
@@ -283,6 +294,7 @@ public class Main {
                                         e.printStackTrace();
                                     }
                                 }
+                                sendere.sendMessage(Headers.SEND_COMPLETE+"\n"+number, user);
                             }
                         };
                         sendere.addTransmissionOut(transmission);
