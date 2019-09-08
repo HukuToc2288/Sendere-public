@@ -266,7 +266,7 @@ public class Main {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         waitForResponse();
                                         FileInputStream in = new FileInputStream(file);
-                                        byte data[] = new byte[1024*1024];
+                                        byte data[] = new byte[32*1024];
                                         int dataLength;
                                         byte prefix[] = (Headers.RAW_DATA+"\n"+number+"\n").getBytes();
                                         while ((dataLength = in.read(data))!=-1){
@@ -278,7 +278,7 @@ public class Main {
                                             if(stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(Headers.CLOSE_FILE+"\n", user);
+                                        sendere.sendMessage(Headers.CLOSE_FILE+"\n"+number, user);
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }
