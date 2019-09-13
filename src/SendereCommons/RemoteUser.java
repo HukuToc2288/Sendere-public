@@ -60,6 +60,7 @@ public abstract class RemoteUser {
                 e.printStackTrace();
             }
         });
+        receiverThread.start();
     }
 
     public boolean sendMessage(byte[] data, int length){
