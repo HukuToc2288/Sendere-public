@@ -33,6 +33,7 @@ public abstract class RemoteUser {
     }
 
     private void commonInitialization(Socket socket) throws IOException {
+        this.socket = socket;
         in = socket.getInputStream();
         out = socket.getOutputStream();
         doReceiving();
