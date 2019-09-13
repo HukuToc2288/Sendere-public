@@ -1,6 +1,5 @@
 package SendereCommons;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
@@ -19,71 +18,48 @@ public abstract class Sendere {
      * Size in bytes of oncoming and incoming messages that should be used instead of
      * hardcoded value.
      */
-    public static final int PACKET_LENGTH = 1024*33;
+    public static final int PACKET_LENGTH = 1024 * 33;
 
     private int mainPort;
     public final long HASH;
-    private DatagramSocket mainSocket;
+    private ServerSocket serverSocket;
     private Thread receiverThread;
     private boolean allowReceiving = true;
     private boolean userReady = true;
+    private int newUserId = 0;
 
-    private ArrayList<RemoteUser> remoteUsers;
+    private HashMap<Integer, RemoteUser> remoteUsers;
     private HashMap<Integer, TransmissionIn> transmissionsIn = new HashMap<Integer, TransmissionIn>();
     private HashMap<Integer, TransmissionOut> transmissionsOut = new HashMap<Integer, TransmissionOut>();
 
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
 
-    private void onReceive(DatagramPacket packet) {
-        String[] receivedMessage = new String(Arrays.copyOf(packet.getData(), packet.getLength())).split("\n");
+    private synchronized void onReceive(RemoteUser sender, byte[] buffer, int length) {
+        String[] receivedMessage = new String(Arrays.copyOf(buffer, length)).split("\n");
         if (receivedMessage[0].equals(Headers.PING) && receivedMessage[1].equals(Headers.TRUE)) {
             if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)
                 return;
-            boolean isNewUser = true;
-            for (RemoteUser user : remoteUsers) {
-                if (user.hash == Long.parseLong(receivedMessage[3]) && user.nickname.equals(receivedMessage[2])) {
-                    user.addAddress(packet.getAddress().getHostAddress());
-                    onRemoteUserUpdated(user);
-                    isNewUser = false;
-                    break;
-                }
-            }
-            if (isNewUser) {
-                RemoteUser user = new RemoteUser(receivedMessage[2], Long.parseLong(receivedMessage[3]), packet.getAddress().getHostAddress(), packet.getPort());
-                remoteUsers.add(user);
-                onRemoteUserConnected(user);
-            }
+            sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
+            onRemoteUserConnected(sender);
             if (Settings.visibility == 1) {
-                String sendMessage = Headers.PONG + "\n" + Settings.nickname + "\n" + HASH;
-                sendPacket(new DatagramPacket(sendMessage.getBytes(), sendMessage.getBytes().length, packet.getAddress(), packet.getPort()));
+                String pongMessage = Headers.PONG + "\n" + Settings.nickname + "\n" + HASH;
+                sendMessage(sender, pongMessage);
             }
         } else if (receivedMessage[0].equals(Headers.PONG)) {
             if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH)
                 return;
-            boolean isNewUser = true;
-            for (RemoteUser user : remoteUsers) {
-                if (user.hash == Long.parseLong(receivedMessage[2]) && user.nickname.equals(receivedMessage[1])) {
-                    user.addAddress(packet.getAddress().getHostAddress());
-                    onRemoteUserUpdated(user);
-                    isNewUser = false;
-                    break;
-                }
-            }
-            if (isNewUser) {
-                RemoteUser user = new RemoteUser(receivedMessage[1], Long.parseLong(receivedMessage[2]), packet.getAddress().getHostAddress(), packet.getPort());
-                remoteUsers.add(user);
-                onRemoteUserFound(user);
+            RemoteUser existingUser = remoteUsers.get(sender.getHash());
+            if (existingUser != null) {
+                onRemoteUserUpdated(existingUser);
+            } else {
+                sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
+                onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
-            RemoteUser user = findRemoteUserByAddress(packet.getAddress().getHostAddress());
-            if (user != null)
-                onTextMessageReceived(user, receivedMessage[1]);
+            onTextMessageReceived(sender, receivedMessage[1]);
         } else if ((receivedMessage[0].equals(Headers.SEND_REQUEST))) {
-            RemoteUser user = findRemoteUserByAddress(packet.getAddress().getHostAddress());
-            if (user == null)
-                return;
-            InRequest request = new InRequest(user, receivedMessage[1].equals(Headers.TRUE), Integer.parseInt(receivedMessage[2]), receivedMessage[3]);
+            InRequest request = new InRequest(sender, receivedMessage[1].equals(Headers.TRUE), Integer.parseInt(receivedMessage[2]), receivedMessage[3]);
             if (userReady) {
                 userReady = false;
                 currentInRequest = request;
@@ -111,22 +87,22 @@ public abstract class Sendere {
         } else if (receivedMessage[0].equals(Headers.MKFILE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createFile(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
+                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createFile(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE));
         } else if (receivedMessage[0].equals(Headers.MKDIR)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createDirectory(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
+                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createDirectory(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE));
         } else if (receivedMessage[0].equals(Headers.RAW_DATA)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
-                sendMessage(Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.writeToFile(Arrays.copyOfRange(packet.getData(), receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), packet.getLength())) ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
+                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.writeToFile(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length)) ? Headers.TRUE : Headers.FALSE));
             }
         } else if (receivedMessage[0].equals(Headers.CLOSE_FILE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.closeFile() ? Headers.TRUE : Headers.FALSE), packet.getAddress(), packet.getPort());
+                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.closeFile() ? Headers.TRUE : Headers.FALSE));
         } else if (receivedMessage[0].equals(Headers.SEND_COMPLETE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {
@@ -147,14 +123,14 @@ public abstract class Sendere {
     public Sendere() {
         for (int i = START_PORT; i <= END_PORT; i++) {
             try {
-                mainSocket = new DatagramSocket(i);
+                serverSocket = new ServerSocket(i);
                 mainPort = i;
                 break;
-            } catch (SocketException e) {
+            } catch (IOException e) {
                 //e.printStackTrace();
             }
         }
-        if (mainSocket == null) {
+        if (serverSocket == null) {
             throw new RuntimeException("There are no free ports in range " + START_PORT + "-" + END_PORT + ". Sendere need at least one of them to run.");
         }
         HASH = System.currentTimeMillis();
@@ -206,8 +182,12 @@ public abstract class Sendere {
                 while (allowReceiving) {
                     DatagramPacket packet = new DatagramPacket(new byte[PACKET_LENGTH], PACKET_LENGTH);
                     try {
-                        mainSocket.receive(packet);
-                        onReceive(packet);
+                        RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
+                            @Override
+                            public void onReceive(byte[] buffer, int length) {
+                                Sendere.this.onReceive(this, buffer, length);
+                            }
+                        };
                     } catch (IOException e) {
                         /*e.printStackTrace();*/
                     }
@@ -218,9 +198,9 @@ public abstract class Sendere {
     }
 
     public void updateRemoteUsersList() {
-        ExecutorService service = Executors.newCachedThreadPool();
+        ExecutorService service = Executors.newFixedThreadPool(256);
         ArrayList<byte[]> addressesToPing = new ArrayList<>();
-        remoteUsers = new ArrayList<>();
+        remoteUsers = new HashMap<>();
         for (SimpleNetworkInterface networkInterface : NetworkList.getNetworkList()) {
             int prefixLength = networkInterface.subnetPreffixLength;
             if (prefixLength == 32)
@@ -237,7 +217,7 @@ public abstract class Sendere {
                     break;
                 }
             }
-            byte[] startAddress = new byte[4];
+            int[] startAddress = new int[4];
             byte[] endAddress = new byte[4];
             for (int i = 0; i < 4; i++) {
                 startAddress[i] = (byte) (networkInterface.byteAddress[i] & mask[i]);
@@ -247,22 +227,23 @@ public abstract class Sendere {
             boolean[] was255 = {false, false, false, false};
             boolean lastPing = false;
             while (true) {
-                byte[] tempAddress = startAddress.clone();
+                int[] tempAddress = startAddress.clone();
                 service.submit(new Runnable() {
                     @Override
                     public void run() {
                         try {
                             //System.out.println("checking "+InetAddress.getByAddress(tempAddress).getHostAddress());
-                            if (InetAddress.getByAddress(tempAddress).isReachable(2000)) {
+                            byte[] tempByteAddress = intToByteArray(tempAddress);
+                            if (InetAddress.getByAddress(tempByteAddress).isReachable(2000)) {
                                 boolean add = true;
                                 for (byte[] bytes : addressesToPing) {
-                                    if (Arrays.equals(bytes, tempAddress)) {
+                                    if (Arrays.equals(bytes, tempByteAddress)) {
                                         add = false;
                                         break;
                                     }
                                 }
-                                if (add && !Arrays.equals(networkInterface.byteAddress, tempAddress))
-                                    addressesToPing.add(tempAddress);
+                                if (add && !Arrays.equals(networkInterface.byteAddress, tempByteAddress))
+                                    addressesToPing.add(tempByteAddress);
                             }
                         } catch (IOException e) {
                             //
@@ -270,35 +251,24 @@ public abstract class Sendere {
                     }
                 });
                 startAddress[3]++;
-                if (startAddress[3] == -1) {
-                    if (was255[3]) {
-                        startAddress[2]++;
-                        startAddress[3] = 0;
-                    }
-                    was255[3] = !was255[3];
-                    if (startAddress[2] == -1) {
-                        if (was255[2]) {
-                            startAddress[1]++;
-                            startAddress[2] = 0;
-                        }
-                        was255[2] = !was255[2];
-                        if (startAddress[1] == -1) {
-                            if (was255[1]) {
-                                startAddress[0]++;
-                                startAddress[1] = 0;
-                            }
-                            was255[1] = !was255[1];
-                            if (startAddress[3] == 0) {
+                if (startAddress[3] == 256) {
+                    startAddress[2]++;
+                    startAddress[3] = 0;
+                    if (startAddress[2] == 256) {
+                        startAddress[1]++;
+                        startAddress[2] = 0;
+                        if (startAddress[1] == 256) {
+                            startAddress[0]++;
+                            startAddress[1] = 0;
+                            if (startAddress[0] == 256) {
                                 //WTF???
                                 //21.08.2019
                             }
                         }
                     }
                 }
-                if (lastPing)
+                if (Arrays.equals(intToByteArray(tempAddress), endAddress))
                     break;
-                if (Arrays.equals(startAddress, endAddress))
-                    lastPing = true;
 
             }
         }
@@ -308,15 +278,30 @@ public abstract class Sendere {
             for (int i = START_PORT; i <= END_PORT; i++) {
                 try {
                     String message = Headers.PING + "\n" + (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE);
-                    sendPacket(new DatagramPacket(message.getBytes(), message.getBytes().length, InetAddress.getByAddress(address), i));
+                    Socket remoteSocket = new Socket(InetAddress.getByAddress(address), i);
+                    RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
+                        @Override
+                        public void onReceive(byte[] buffer, int length) {
+                            Sendere.this.onReceive(this, buffer, length);
+                        }
+                    };
+                    sendMessage(unidentifiedUser, message);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         }
     }
 
-    public void addOrUpdateRemoteUser(String nickname, long hash, String address, int port) {
+    public byte[] intToByteArray(int[] ints) {
+        byte[] bytes = new byte[ints.length];
+        for (int i = 0; i < ints.length; i++) {
+            bytes[i] = (byte) ints[i];
+        }
+        return bytes;
+    }
+
+/*    public void addOrUpdateRemoteUser(String nickname, long hash, Socket socket) {
         boolean isNewUser = true;
         for (RemoteUser user : remoteUsers) {
             if (user.hash == hash && user.nickname.equals(nickname)) {
@@ -327,55 +312,25 @@ public abstract class Sendere {
         }
         if (isNewUser)
             remoteUsers.add(new RemoteUser(nickname, hash, address, port));
+    }*/
+
+    public boolean sendMessage(RemoteUser remoteUser, String message) {
+        return sendMessage(remoteUser, message.getBytes(), message.getBytes().length);
     }
 
-    public boolean sendMessage(String message, RemoteUser remoteUser) {
-        try {
-            return sendMessage(message, InetAddress.getByName(remoteUser.getAddresses().iterator().next()), remoteUser.getPort());
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public boolean sendMessage(String message, InetAddress address, int port) {
-        DatagramPacket packet = new DatagramPacket(message.getBytes(), message.getBytes().length, address, port);
-        return sendPacket(packet);
-
-    }
-
-    public boolean sendPacket(DatagramPacket packet) {
-        try {
-            mainSocket.send(packet);
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public boolean sendRaw(byte[] data, int length, RemoteUser remoteUser) {
-        try {
-            return sendPacket(new DatagramPacket(data, length, InetAddress.getByName(remoteUser.getAddresses().iterator().next()), remoteUser.getPort()));
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public DatagramSocket getMainSocket() {
-        return mainSocket;
+    public boolean sendMessage(RemoteUser remoteUser, byte[] data, int length) {
+        return remoteUser.sendMessage(data, length);
     }
 
     public int getMainPort() {
         return mainPort;
     }
 
-    public ArrayList<RemoteUser> getRemoteUsers() {
+    public HashMap<Integer, RemoteUser> getRemoteUsers() {
         return remoteUsers;
     }
 
-    public RemoteUser findRemoteUserByAddress(String address) {
+/*    public RemoteUser findRemoteUserByAddress(String address) {
         for (RemoteUser user : remoteUsers) {
             for (String s : user.getAddresses()) {
                 if (s.equals(address))
@@ -383,12 +338,12 @@ public abstract class Sendere {
             }
         }
         return null;
-    }
+    }*/
 
     public void processSendRequest(boolean allow, TransmissionIn transmission) {
         if (allow)
             transmissionsIn.put(transmission.number, transmission);
-        sendMessage(Headers.SEND_RESPONSE + "\n" + (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number, currentInRequest.who);
+        sendMessage(transmission.user, Headers.SEND_RESPONSE + "\n" + (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number);
         if (!inRequests.isEmpty()) {
             currentInRequest = inRequests.removeLast();
             onSendRequest(currentInRequest);
@@ -398,11 +353,11 @@ public abstract class Sendere {
     }
 
     public boolean createRemoteDirectory(String relativePath, TransmissionOut transmission) {
-        return sendMessage(Headers.MKDIR + "\n" + transmission.number + "\n" + relativePath, transmission.user);
+        return sendMessage(transmission.user, Headers.MKDIR + "\n" + transmission.number + "\n" + relativePath);
     }
 
     public boolean createRemoteFile(String relativePath, TransmissionOut transmission) {
-        return sendMessage(Headers.MKFILE + "\n" + transmission.number + "\n" + relativePath, transmission.user);
+        return sendMessage(transmission.user, Headers.MKFILE + "\n" + transmission.number + "\n" + relativePath);
     }
 
     public void addTransmissionOut(TransmissionOut transmission) {
@@ -410,7 +365,7 @@ public abstract class Sendere {
     }
 
     public void sendTransmissionRequest(TransmissionOut transmission) {
-        sendMessage(Headers.SEND_REQUEST + "\n" + (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename, transmission.user);
+        sendMessage(transmission.user, Headers.SEND_REQUEST + "\n" + (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename);
     }
 }
 

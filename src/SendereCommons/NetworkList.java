@@ -13,8 +13,14 @@ public class NetworkList {
 
     private static SimpleNetworkInterface[] networkList;
 
-    public static void updateList() throws SocketException {
-        ArrayList<NetworkInterface> nets = Collections.list(NetworkInterface.getNetworkInterfaces());
+    public static void updateList() {
+        ArrayList<NetworkInterface> nets = null;
+        try {
+            nets = Collections.list(NetworkInterface.getNetworkInterfaces());
+        } catch (SocketException e) {
+            //If there are absolutely no nets (even loopback)
+            nets = new ArrayList<>();
+        }
         ArrayList<SimpleNetworkInterface> networkInterfaceArray = new ArrayList<SimpleNetworkInterface>();
         for (int i = 0; i<nets.size(); i++){
             ArrayList<InetAddress> inetAddresses = Collections.list(nets.get(i).getInetAddresses());

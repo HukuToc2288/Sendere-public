@@ -21,11 +21,10 @@ public class Main {
             //Keep default
         }
         println("Сбор даннных о сетевых интерфесах...");
-        try {
-            NetworkList.updateList();
-        } catch (SocketException e) {
-            e.printStackTrace();
+        NetworkList.updateList();
+        if(NetworkList.getNetworkList().length==0){
             println("Ваше устройство не педключено ни к одной сети");
+            System.exit(0);
         }
         println("Инициализация сервиса...");
         sendere = new Sendere() {
@@ -36,17 +35,17 @@ public class Main {
 
             @Override
             public void onRemoteUserConnected(RemoteUser user) {
-                println("Подключился пользователь "+user.nickname);
+                println("Подключился пользователь "+user.getNickname());
             }
 
             @Override
             public void onRemoteUserFound(RemoteUser user) {
-                println("Обнаружен пользователь "+user.nickname);
+                println("Обнаружен пользователь "+user.getNickname());
             }
 
             @Override
             public void onTextMessageReceived(RemoteUser who, String message) {
-                println("Сообщение от пользователя "+who.nickname+": "+message);
+                println("Сообщение от пользователя "+who.getNickname()+": "+message);
             }
 
             @Override
@@ -197,15 +196,8 @@ public class Main {
                         for (int i = 0; i < sendere.getRemoteUsers().size(); i++) {
                             RemoteUser tempUser = sendere.getRemoteUsers().get(i);
                             println("Пользователь " + i + ":");
-                            println("Никнейм: " + tempUser.nickname);
-                            if (tempUser.getAddresses().size() == 1) {
-                                println("Локальнй адрес: " + tempUser.getAddresses().iterator().next());
-                            } else {
-                                println("Локальные адреса: ");
-                                for (int j = 0; j < tempUser.getAddresses().size(); j++) {
-                                    println(j + ":\t" + tempUser.getAddresses().iterator().next());
-                                }
-                            }
+                            println("Никнейм: " + tempUser.getNickname());
+                            println("Локальнй адрес: " + tempUser.getAddress());
                             println("");
                         }
                     } else if (line.startsWith("/tell ") && line.split(" ").length >= 3) {
@@ -217,7 +209,7 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        sendere.sendMessage(Headers.TEXT + "\n" + split[2], tempUser);
+                        sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
                     } else if (line.startsWith("/send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
@@ -284,17 +276,17 @@ public class Main {
                                             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
                                             outputStream.write(prefix);
                                             outputStream.write(data);
-                                            sendere.sendRaw(outputStream.toByteArray(), prefix.length+dataLength , user);
+                                            sendere.sendMessage(user, outputStream.toByteArray(), prefix.length+dataLength);
                                             waitForResponse();
                                             if(stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(Headers.CLOSE_FILE+"\n"+number, user);
+                                        sendere.sendMessage(user, Headers.CLOSE_FILE+"\n"+number);
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }
                                 }
-                                sendere.sendMessage(Headers.SEND_COMPLETE+"\n"+number, user);
+                                sendere.sendMessage(user, Headers.SEND_COMPLETE+"\n"+number);
                             }
                         };
                         sendere.addTransmissionOut(transmission);
