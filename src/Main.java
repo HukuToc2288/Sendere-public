@@ -198,9 +198,8 @@ public class Main {
                         }
                         println("Пользователи в сети:");
                         println("");
-                        for (int i = 0; i < sendere.getRemoteUsers().size(); i++) {
-                            RemoteUser tempUser = sendere.getRemoteUsers().get(i);
-                            println("Пользователь " + i + ":");
+                        for (RemoteUser tempUser: sendere.getRemoteUsers().values()) {
+                            println("Пользователь " + tempUser.getHash() + ":");
                             println("Никнейм: " + tempUser.getNickname());
                             println("Локальнй адрес: " + tempUser.getAddress());
                             println("");
