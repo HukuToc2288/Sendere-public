@@ -180,7 +180,6 @@ public abstract class Sendere {
             @Override
             public void run() {
                 while (allowReceiving) {
-                    DatagramPacket packet = new DatagramPacket(new byte[PACKET_LENGTH], PACKET_LENGTH);
                     try {
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
                             @Override
@@ -274,23 +273,32 @@ public abstract class Sendere {
         }
         service.shutdown();
         while (!service.isTerminated()) ;
+        service = Executors.newFixedThreadPool(256);
+        String message = Headers.PING + "\n" + (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE);
         for (byte[] address : addressesToPing) {
             for (int i = START_PORT; i <= END_PORT; i++) {
-                try {
-                    String message = Headers.PING + "\n" + (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE);
-                    Socket remoteSocket = new Socket(InetAddress.getByAddress(address), i);
-                    RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
-                        @Override
-                        public void onReceive(byte[] buffer, int length) {
-                            Sendere.this.onReceive(this, buffer, length);
+                int finalI = i;
+                service.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Socket remoteSocket = new Socket(InetAddress.getByAddress(address), finalI);
+                            RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
+                                @Override
+                                public void onReceive(byte[] buffer, int length) {
+                                    Sendere.this.onReceive(this, buffer, length);
+                                }
+                            };
+                            sendMessage(unidentifiedUser, message);
+                        } catch (IOException e) {
+                            //e.printStackTrace();
                         }
-                    };
-                    sendMessage(unidentifiedUser, message);
-                } catch (IOException e) {
-                    //e.printStackTrace();
-                }
+                    }
+                });
             }
         }
+        service.shutdown();
+        while (!service.isTerminated()) ;
     }
 
     public byte[] intToByteArray(int[] ints) {
