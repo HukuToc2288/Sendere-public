@@ -55,7 +55,7 @@ public abstract class Sendere {
                 onRemoteUserUpdated(existingUser);
             } else {
                 sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
-                remoteUsers.put(Long.parseLong(receivedMessage[3]), sender);
+                remoteUsers.put(Long.parseLong(receivedMessage[2]), sender);
                 onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
