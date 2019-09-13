@@ -63,6 +63,11 @@ public class Main {
                     println("Передача "+transmission.number+" отклонена");
                 }
             }
+
+            @Override
+            public void onUserDisconnected(RemoteUser remoteUser) {
+                println("Пользователь "+remoteUser.getNickname()+" отключился");
+            }
         };
         println("Sendere запущен на порту "+sendere.getMainPort());
         println("Поиск устройств в сети...");

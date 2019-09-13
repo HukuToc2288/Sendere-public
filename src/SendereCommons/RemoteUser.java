@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -47,8 +48,11 @@ public abstract class RemoteUser {
                     if(length>0 && !stopReceiving){
                         onReceive(buffer, length);
                     }
+                } catch (SocketException e) {
+                    destroy();
+                    onDisconnect();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
             try {
@@ -62,6 +66,8 @@ public abstract class RemoteUser {
         });
         receiverThread.start();
     }
+
+    protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
         try {

@@ -28,7 +28,7 @@ public abstract class Sendere {
     private boolean userReady = true;
     private int newUserId = 0;
 
-    private HashMap<Integer, RemoteUser> remoteUsers;
+    private HashMap<Long, RemoteUser> remoteUsers;
     private HashMap<Integer, TransmissionIn> transmissionsIn = new HashMap<Integer, TransmissionIn>();
     private HashMap<Integer, TransmissionOut> transmissionsOut = new HashMap<Integer, TransmissionOut>();
 
@@ -41,6 +41,7 @@ public abstract class Sendere {
             if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)
                 return;
             sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
+            remoteUsers.put(Long.parseLong(receivedMessage[3]), sender);
             onRemoteUserConnected(sender);
             if (Settings.visibility == 1) {
                 String pongMessage = Headers.PONG + "\n" + Settings.nickname + "\n" + HASH;
@@ -54,6 +55,7 @@ public abstract class Sendere {
                 onRemoteUserUpdated(existingUser);
             } else {
                 sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
+                remoteUsers.put(Long.parseLong(receivedMessage[3]), sender);
                 onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
@@ -175,6 +177,8 @@ public abstract class Sendere {
 
     public abstract void onSendResponse(boolean allow, TransmissionOut transmission);
 
+    public abstract void onUserDisconnected(RemoteUser remoteUser);
+
     public void startReceiving() {
         receiverThread = new Thread(new Runnable() {
             @Override
@@ -182,6 +186,11 @@ public abstract class Sendere {
                 while (allowReceiving) {
                     try {
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
+                            @Override
+                            protected void onDisconnect() {
+                                onUserDisconnected(this);
+                            }
+
                             @Override
                             public void onReceive(byte[] buffer, int length) {
                                 Sendere.this.onReceive(this, buffer, length);
@@ -285,6 +294,12 @@ public abstract class Sendere {
                             Socket remoteSocket = new Socket(InetAddress.getByAddress(address), finalI);
                             RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
                                 @Override
+                                protected void onDisconnect() {
+                                    remoteUsers.remove(this.getHash());
+                                    onUserDisconnected(this);
+                                }
+
+                                @Override
                                 public void onReceive(byte[] buffer, int length) {
                                     Sendere.this.onReceive(this, buffer, length);
                                 }
@@ -334,7 +349,7 @@ public abstract class Sendere {
         return mainPort;
     }
 
-    public HashMap<Integer, RemoteUser> getRemoteUsers() {
+    public HashMap<Long, RemoteUser> getRemoteUsers() {
         return remoteUsers;
     }
 
