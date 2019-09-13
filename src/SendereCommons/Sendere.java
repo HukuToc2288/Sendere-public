@@ -53,7 +53,7 @@ public abstract class Sendere {
             if (existingUser != null) {
                 onRemoteUserUpdated(existingUser);
             } else {
-                sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
+                sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
                 onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
