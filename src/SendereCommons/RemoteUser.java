@@ -50,7 +50,7 @@ public abstract class RemoteUser {
                     read = in.read(packetLength);
                     if(read<0)
                         throw new SocketException();
-                    int length = packetLength[0]<<8 + packetLength[1];
+                    int length = (packetLength[0]<<8) + packetLength[1];
                     buffer[0] = (byte) in.read();
                     if(buffer[0]!="/".getBytes()[0])
                         continue;
