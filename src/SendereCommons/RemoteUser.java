@@ -46,22 +46,18 @@ public abstract class RemoteUser {
                 int read;
                 byte[] packetLength = new byte[2];
                 try {
-                    for (int i=0; i< packetLength.length; i++){
-                        read=in.read();
-                        if(read<0)
-                            throw new SocketException();
-                        packetLength[i] = (byte) in.read();
-                    }
+                    while (in.available()<3);
+                    read = in.read(packetLength);
+                    if(read<0)
+                        throw new SocketException();
                     int length = packetLength[0]<<8 + packetLength[1];
                     buffer[0] = (byte) in.read();
                     if(buffer[0]!="/".getBytes()[0])
                         continue;
-                    for (int i=0; i < length; i++){
-                        read = in.read();
-                        if(read<0)
-                            throw new SocketException();
-                        buffer[i] = (byte) in.read();
-                    }
+                    while (in.available()<length-1);
+                    read = in.read(buffer, 1, length-1);
+                    if(read<0)
+                        throw new SocketException();
                     onReceive(buffer.clone(), length);
                 } catch (SocketException e) {
                     destroy();
@@ -85,9 +81,9 @@ public abstract class RemoteUser {
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
-        byte[] byteLength = new byte[]{(byte) ((length|0x0000FF00)>>8), (byte) (length|0x000000FF)};
+        byte[] byteLength = new byte[]{(byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF)};
         try {
-            out.write(byteLength,0,length);
+            out.write(byteLength,0,byteLength.length);
             out.write(data, 0, length);
             return true;
         } catch (IOException e) {
