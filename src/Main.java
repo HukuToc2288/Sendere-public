@@ -208,7 +208,7 @@ public class Main {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
-                            tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
+                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
@@ -218,7 +218,7 @@ public class Main {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
-                            tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
+                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
