@@ -54,8 +54,8 @@ public abstract class RemoteUser {
                     buffer[0] = (byte) in.read();
                     if(buffer[0]!="/".getBytes()[0])
                         continue;
-                    while (in.available()<length-1);
-                    read = in.read(buffer, 1, length-1);
+                    while (in.available()<length);
+                    read = in.read(buffer );
                     if(read<0)
                         throw new SocketException();
                     onReceive(buffer.clone(), length);
@@ -84,6 +84,7 @@ public abstract class RemoteUser {
         byte[] byteLength = new byte[]{(byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF)};
         try {
             out.write(byteLength,0,byteLength.length);
+            out.write(47);
             out.write(data, 0, length);
             return true;
         } catch (IOException e) {
