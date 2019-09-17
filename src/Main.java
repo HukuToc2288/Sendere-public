@@ -209,6 +209,8 @@ public class Main {
                         RemoteUser tempUser;
                         try {
                             tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            if (tempUser==null)
+                                throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
@@ -219,6 +221,8 @@ public class Main {
                         RemoteUser tempUser;
                         try {
                             tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            if (tempUser==null)
+                                throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
