@@ -4,17 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.logging.Handler;
 
 public abstract class RemoteUser {
@@ -25,69 +20,48 @@ public abstract class RemoteUser {
 
     private String nickname;
     private long hash;
-    private SocketChannel socket;
+    private Socket socket;
     private int port;
     private boolean identified = false;
-/*    private InputStream in;
-    private OutputStream out;*/
+    private InputStream in;
+    private OutputStream out;
     private boolean stopReceiving = false;
-    Selector selector;
 
-    public RemoteUser(String nickname, long hash, SocketChannel socket) throws IOException {
+    public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
         commonInitialization(socket);
     }
 
-    public RemoteUser(SocketChannel socket) throws IOException {
+    public RemoteUser(Socket socket) throws IOException {
         commonInitialization(socket);
     }
 
-    private void commonInitialization(SocketChannel socket) throws IOException {
+    private void commonInitialization(Socket socket) throws IOException {
         this.socket = socket;
-        selector = SelectorProvider.provider().openSelector();
+        in = socket.getInputStream();
+        out = socket.getOutputStream();
         doReceiving();
     }
 
     private void doReceiving() {
         Thread receiverThread = new Thread(() -> {
             while (!stopReceiving){
-
                 int read = 0;
                 byte[] packetLength = new byte[4];
                 int length = packetLength.length;
-                ByteBuffer lengthBuffer = ByteBuffer.allocate(4);
                 try {
-
-                    // wait for events
-                    this.selector.select();
-
-                    //work on selected keys
-                    Iterator keys = this.selector.selectedKeys().iterator();
-                    while (keys.hasNext()) {
-                        SelectionKey key = (SelectionKey) keys.next();
-
-                        // this is necessary to prevent the same key from coming up
-                        // again the next time around.
-                        keys.remove();
-                        if (!key.isValid()) {
-                            continue;
-                        }
-                        if (key.isReadable()){
-                            while (read<length)
-                                read+=socket.read(lengthBuffer);
-                            length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
-                            //47 is '/' symbol's code
-                            //18.09.2019
-                            if(packetLength[3]!=47)
-                                continue;
-                            SocketChannel channel = (SocketChannel) key.channel();
-                            ByteBuffer buffer = ByteBuffer.allocate(length);
-                            read = 0;
-                            while (read<length)
-                            read+= channel.read(buffer);
-                            onReceive(buffer.array(), length);
-                        }
-                    }
+                    while (in.available()<4&&!stopReceiving);
+                    in.read(packetLength);
+                    length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
+                    //47 is '/' symbol's code
+                    //18.09.2019
+                    if(packetLength[3]!=47)
+                        continue;
+                    read = 0;
+                    byte[] buffer = new byte[length];
+                    while (read<length&&!stopReceiving)
+                        read+=in.read(buffer, read, length-read);
+                    onReceive(buffer, length);
                 } catch (SocketException e) {
                     destroy();
                     onDisconnect();
@@ -95,13 +69,16 @@ public abstract class RemoteUser {
                     //e.printStackTrace();
                 }
             }
+            try {
+                in.close();
+                out.close();
+            } catch (IOException e) {
+                //Okay
+                //10.09.2019
+                e.printStackTrace();
+            }
         });
         receiverThread.start();
-    }
-
-    private void read(SelectionKey key) throws IOException {
-
-
     }
 
     protected abstract void onDisconnect();
@@ -109,10 +86,8 @@ public abstract class RemoteUser {
     public boolean sendMessage(byte[] data, int length){
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
         try {
-            ByteBuffer buffer = ByteBuffer.allocate(length+4);
-            buffer.put(byteLength);
-            buffer.put(data);
-            socket.write(buffer);
+            out.write(byteLength);
+            out.write(data);
             return true;
         } catch (SocketException e) {
             destroy();
@@ -161,6 +136,6 @@ public abstract class RemoteUser {
     }
 
     public String getAddress() {
-        return socket.socket().getInetAddress().getHostAddress();
+        return socket.getInetAddress().getHostAddress();
     }
 }

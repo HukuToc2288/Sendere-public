@@ -2,8 +2,6 @@ package SendereCommons;
 
 import java.io.IOException;
 import java.net.*;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +22,7 @@ public abstract class Sendere {
 
     private int mainPort;
     public final long HASH;
-    private ServerSocketChannel serverSocket;
+    private ServerSocket serverSocket;
     private Thread receiverThread;
     private boolean allowReceiving = true;
     private boolean userReady = true;
@@ -127,8 +125,7 @@ public abstract class Sendere {
     public Sendere() {
         for (int i = START_PORT; i <= END_PORT; i++) {
             try {
-                serverSocket = ServerSocketChannel.open();
-                serverSocket.bind(new InetSocketAddress(i));
+                serverSocket = new ServerSocket(i);
                 mainPort = i;
                 break;
             } catch (IOException e) {
@@ -294,7 +291,7 @@ public abstract class Sendere {
                     @Override
                     public void run() {
                         try {
-                            SocketChannel remoteSocket = SocketChannel.open(new InetSocketAddress(InetAddress.getByAddress(address), finalI));
+                            Socket remoteSocket = new Socket(InetAddress.getByAddress(address), finalI);
                             RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
                                 @Override
                                 protected void onDisconnect() {
@@ -394,4 +391,3 @@ public abstract class Sendere {
         sendMessage(transmission.user, Headers.SEND_REQUEST + "\n" + (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename);
     }
 }
-
