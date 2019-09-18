@@ -35,7 +35,7 @@ public abstract class Sendere {
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
 
-    private synchronized void onReceive(RemoteUser sender, byte[] buffer, int length) {
+    private void onReceive(RemoteUser sender, byte[] buffer, int length) {
         String[] receivedMessage = new String(Arrays.copyOf(buffer, length)).split("\n");
         if (receivedMessage[0].equals(Headers.PING) && receivedMessage[1].equals(Headers.TRUE)) {
             if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)

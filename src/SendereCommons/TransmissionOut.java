@@ -30,19 +30,19 @@ public abstract class TransmissionOut {
     public abstract void onSuccess();
 
     public void waitForResponse(){
-        synchronized (pauseLock) {
+/*        synchronized (pauseLock) {
             try {
                 pauseLock.wait();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
     public void resume() {
-        synchronized (pauseLock) {
+/*        synchronized (pauseLock) {
             pauseLock.notifyAll(); // Unblocks thread
-        }
+        }*/
     }
 
     public void terminate(){

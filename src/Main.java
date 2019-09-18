@@ -215,7 +215,9 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
+                        while (true)
+                            sendere.sendMessage(tempUser, new byte[32000], 32000);
+                        //sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
                     } else if (line.startsWith("/send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
@@ -244,8 +246,8 @@ public class Main {
 
                             @Override
                             public void onIntermediateSuccess() {
-                                resume();
-                                System.out.print("*");
+                               /* resume();
+                                System.out.print("*");*/
                             }
 
                             @Override
@@ -277,7 +279,7 @@ public class Main {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         waitForResponse();
                                         FileInputStream in = new FileInputStream(file);
-                                        byte data[] = new byte[32*1024];
+                                        byte data[] = new byte[4*1024];
                                         int dataLength;
                                         byte prefix[] = (Headers.RAW_DATA+"\n"+number+"\n").getBytes();
                                         while ((dataLength = in.read(data))!=-1){

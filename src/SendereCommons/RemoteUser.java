@@ -51,14 +51,14 @@ public abstract class RemoteUser {
                     if(read<0)
                         throw new SocketException();
                     int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<8) + packetLength[1] + (packetLength[1]>=0 ? 0 : 256);
-                    buffer[0] = (byte) in.read();
-                    if(buffer[0]!="/".getBytes()[0])
+                    //47 is '/' symbol's code
+                    //18.09.2019
+                    if(in.read()!=47)
                         continue;
-                    while (in.available()<length);
-                    read = in.read(buffer );
-                    if(read<0)
-                        throw new SocketException();
-                    onReceive(buffer.clone(), length);
+                    read = 0;
+                    while (read<length)
+                        read+=in.read(buffer, read, Math.min(in.available(), length-read));
+                    onReceive(buffer, length);
                 } catch (SocketException e) {
                     destroy();
                     onDisconnect();
@@ -87,10 +87,13 @@ public abstract class RemoteUser {
             out.write(47);
             out.write(data, 0, length);
             return true;
+        } catch (SocketException e) {
+            destroy();
+            onDisconnect();
         } catch (IOException e) {
-            e.printStackTrace();
-            return false;
+            //e.printStackTrace();
         }
+        return false;
     }
 
     public void setPort(int port){
