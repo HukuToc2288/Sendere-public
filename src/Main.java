@@ -216,7 +216,7 @@ public class Main {
                             continue;
                         }
                         while (true)
-                            sendere.sendMessage(tempUser, new byte[32000], 32000);
+                            sendere.sendMessage(tempUser, new byte[1048576], 1048576);
                         //sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
                     } else if (line.startsWith("/send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);

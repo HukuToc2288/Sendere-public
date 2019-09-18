@@ -1,10 +1,9 @@
 package SendereCommons;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -21,9 +20,10 @@ public abstract class RemoteUser {
     private Socket socket;
     private int port;
     private boolean identified = false;
-    private InputStream in;
-    private OutputStream out;
+    private BufferedInputStream in;
+    private BufferedOutputStream out;
     private boolean stopReceiving = false;
+    ByteBuffer byteBuffer;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -36,8 +36,8 @@ public abstract class RemoteUser {
 
     private void commonInitialization(Socket socket) throws IOException {
         this.socket = socket;
-        in = socket.getInputStream();
-        out = socket.getOutputStream();
+        in = new BufferedInputStream(socket.getInputStream());
+        out = new BufferedOutputStream(socket.getOutputStream());
         doReceiving();
     }
 
