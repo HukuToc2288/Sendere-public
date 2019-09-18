@@ -83,7 +83,7 @@ public abstract class RemoteUser {
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
-        byte[] byteLength = new byte[]{(byte) ((length>>16)&0x00000FF), (byte) ((length>>8)&0x00000FF), (byte) (length&0x000000FF)};
+        byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF)};
         try {
             out.write(byteLength,0,byteLength.length);
             out.write(47);
