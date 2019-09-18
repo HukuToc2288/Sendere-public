@@ -45,20 +45,19 @@ public abstract class RemoteUser {
         Thread receiverThread = new Thread(() -> {
             while (!stopReceiving){
                 byte[] buffer = new byte[BUFFER_LENGTH];
-                int read;
-                byte[] packetLength = new byte[3];
+                int read = 0;
+                byte[] packetLength = new byte[4];
+                int length = packetLength.length;
                 try {
-                    while (in.available()<3);
-                    read = in.read(packetLength);
-                    if(read<0)
-                        throw new SocketException();
-                    int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
+                    while (read<length&&!stopReceiving)
+                     length+=in.read(packetLength, read, length-read);
+                    length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
                     if(in.read()!=47)
                         continue;
                     read = 0;
-                    while (read<length)
+                    while (read<length&&!stopReceiving)
                         read+=in.read(buffer, read, length-read);
                     onReceive(buffer, length);
                 } catch (SocketException e) {
