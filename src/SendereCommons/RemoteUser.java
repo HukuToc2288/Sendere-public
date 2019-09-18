@@ -86,10 +86,8 @@ public abstract class RemoteUser {
     public boolean sendMessage(byte[] data, int length){
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
         try {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(length+4);
-            byteBuffer.put(byteLength);
-            byteBuffer.put(data);
-            out.write(byteBuffer.array());
+            out.write(byteLength);
+            out.write(data);
             return true;
         } catch (SocketException e) {
             destroy();
