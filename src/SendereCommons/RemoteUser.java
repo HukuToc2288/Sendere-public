@@ -58,15 +58,10 @@ public abstract class RemoteUser {
                     if(packetLength[3]!=47)
                         continue;
                     read = 0;
-                    ByteBuffer dataBuffer = ByteBuffer.allocate(length);
-                    while (read<length){
-                        int a = in.read();
-                        if(a>=0){
-                            dataBuffer.put((byte) a);
-                        }
-
-                    }
-                    onReceive(dataBuffer.array(), length);
+                    byte[] buffer = new byte[length];
+                    while (read<length&&!stopReceiving)
+                        read+=in.read(buffer, read, length-read);
+                    onReceive(buffer, length);
                 } catch (SocketException e) {
                     destroy();
                     onDisconnect();
