@@ -25,9 +25,7 @@ public abstract class RemoteUser {
     private boolean identified = false;
     private InputStream in;
     private OutputStream out;
-    private SocketChannel channel;
     private boolean stopReceiving = false;
-    ByteBuffer byteBuffer;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -42,20 +40,18 @@ public abstract class RemoteUser {
         this.socket = socket;
         in = socket.getInputStream();
         out = socket.getOutputStream();
-        channel = socket.getChannel();
         doReceiving();
     }
 
     private void doReceiving() {
         Thread receiverThread = new Thread(() -> {
             while (!stopReceiving){
-                ByteBuffer lengthBuffer = ByteBuffer.allocate(4);
                 int read = 0;
                 byte[] packetLength = new byte[4];
                 int length = packetLength.length;
                 try {
-                    channel.read(lengthBuffer);
-                    packetLength = lengthBuffer.array();
+                    while (in.available()<4&&!stopReceiving);
+                    in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
@@ -63,7 +59,13 @@ public abstract class RemoteUser {
                         continue;
                     read = 0;
                     ByteBuffer dataBuffer = ByteBuffer.allocate(length);
-                    read+=channel.read(dataBuffer);
+                    while (read<length){
+                        int a = in.read();
+                        if(a>=0){
+                            dataBuffer.put((byte) a);
+                        }
+
+                    }
                     onReceive(dataBuffer.array(), length);
                 } catch (SocketException e) {
                     destroy();
@@ -92,7 +94,7 @@ public abstract class RemoteUser {
             ByteBuffer byteBuffer = ByteBuffer.allocate(length+4);
             byteBuffer.put(byteLength);
             byteBuffer.put(data);
-            channel.write(byteBuffer);
+            out.write(byteBuffer.array());
             return true;
         } catch (SocketException e) {
             destroy();
