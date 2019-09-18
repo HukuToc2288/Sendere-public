@@ -1,9 +1,12 @@
 package SendereCommons;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -20,8 +23,9 @@ public abstract class RemoteUser {
     private Socket socket;
     private int port;
     private boolean identified = false;
-    private BufferedInputStream in;
-    private BufferedOutputStream out;
+    private InputStream in;
+    private OutputStream out;
+    private SocketChannel channel;
     private boolean stopReceiving = false;
     ByteBuffer byteBuffer;
 
@@ -36,30 +40,31 @@ public abstract class RemoteUser {
 
     private void commonInitialization(Socket socket) throws IOException {
         this.socket = socket;
-        in = new BufferedInputStream(socket.getInputStream());
-        out = new BufferedOutputStream(socket.getOutputStream());
+        in = socket.getInputStream();
+        out = socket.getOutputStream();
+        channel = socket.getChannel();
         doReceiving();
     }
 
     private void doReceiving() {
         Thread receiverThread = new Thread(() -> {
             while (!stopReceiving){
-                byte[] buffer = new byte[BUFFER_LENGTH];
+                ByteBuffer lengthBuffer = ByteBuffer.allocate(4);
                 int read = 0;
                 byte[] packetLength = new byte[4];
                 int length = packetLength.length;
                 try {
-                    while (in.available()<4&&!stopReceiving);
-                    in.read(packetLength);
+                    channel.read(lengthBuffer);
+                    packetLength = lengthBuffer.array();
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
                     if(packetLength[3]!=47)
                         continue;
                     read = 0;
-                    while (read<length&&!stopReceiving)
-                        read+=in.read(buffer, read, length-read);
-                    onReceive(buffer, length);
+                    ByteBuffer dataBuffer = ByteBuffer.allocate(length);
+                    read+=channel.read(dataBuffer);
+                    onReceive(dataBuffer.array(), length);
                 } catch (SocketException e) {
                     destroy();
                     onDisconnect();
@@ -82,12 +87,12 @@ public abstract class RemoteUser {
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
-        byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF)};
+        byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
         try {
-            out.write(byteLength,0,byteLength.length);
-            out.write(47);
-            out.write(data, 0, length);
-            out.flush();
+            ByteBuffer byteBuffer = ByteBuffer.allocate(length+4);
+            byteBuffer.put(byteLength);
+            byteBuffer.put(data);
+            channel.write(byteBuffer);
             return true;
         } catch (SocketException e) {
             destroy();
