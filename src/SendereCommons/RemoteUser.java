@@ -12,7 +12,9 @@ import java.util.logging.Handler;
 
 public abstract class RemoteUser {
 
-    public static final int BUFFER_LENGTH = 1024*33;
+    //It's almost 16MiB
+    //18.09.2019
+    public static final int BUFFER_LENGTH = 1024*1024*16-1;
 
     private String nickname;
     private long hash;
@@ -44,13 +46,13 @@ public abstract class RemoteUser {
             while (!stopReceiving){
                 byte[] buffer = new byte[BUFFER_LENGTH];
                 int read;
-                byte[] packetLength = new byte[2];
+                byte[] packetLength = new byte[3];
                 try {
                     while (in.available()<3);
                     read = in.read(packetLength);
                     if(read<0)
                         throw new SocketException();
-                    int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<8) + packetLength[1] + (packetLength[1]>=0 ? 0 : 256);
+                    int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<8) + packetLength[1] + (packetLength[1]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
                     if(in.read()!=47)
@@ -81,7 +83,7 @@ public abstract class RemoteUser {
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
-        byte[] byteLength = new byte[]{(byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF)};
+        byte[] byteLength = new byte[]{(byte) ((length>>16)&0x00000FF), (byte) ((length>>8)&0x00000FF), (byte) (length&0x000000FF)};
         try {
             out.write(byteLength,0,byteLength.length);
             out.write(47);
