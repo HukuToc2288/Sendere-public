@@ -59,7 +59,7 @@ public abstract class RemoteUser {
                         continue;
                     read = 0;
                     while (read<length)
-                        read+=in.read(buffer, read, Math.min(in.available(), length-read));
+                        read+=in.read(buffer, read, length-read);
                     onReceive(buffer, length);
                 } catch (SocketException e) {
                     destroy();
