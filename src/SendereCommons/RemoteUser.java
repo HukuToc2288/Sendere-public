@@ -87,6 +87,7 @@ public abstract class RemoteUser {
             out.write(byteLength,0,byteLength.length);
             out.write(47);
             out.write(data, 0, length);
+            out.flush();
             return true;
         } catch (SocketException e) {
             destroy();
