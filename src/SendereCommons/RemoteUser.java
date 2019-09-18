@@ -50,11 +50,11 @@ public abstract class RemoteUser {
                 int length = packetLength.length;
                 try {
                     while (read<length&&!stopReceiving)
-                     length+=in.read(packetLength, read, length-read);
+                     read+=in.read(packetLength, read, length-read);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
-                    if(in.read()!=47)
+                    if(packetLength[3]!=47)
                         continue;
                     read = 0;
                     while (read<length&&!stopReceiving)
