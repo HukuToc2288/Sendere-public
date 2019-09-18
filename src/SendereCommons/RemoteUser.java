@@ -52,7 +52,7 @@ public abstract class RemoteUser {
                     read = in.read(packetLength);
                     if(read<0)
                         throw new SocketException();
-                    int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<8) + packetLength[1] + (packetLength[1]>=0 ? 0 : 256);
+                    int length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[0]>=0 ? 0 : 256))<<8) + packetLength[1] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
                     if(in.read()!=47)
