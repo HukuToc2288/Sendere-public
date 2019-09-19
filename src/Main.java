@@ -247,14 +247,12 @@ public class Main {
                             @Override
                             public void onFail() {
                                 terminate();
-                                user.setFullSpeed(false);
                                 println("Передача с номером "+number+" не удалась");
                             }
 
                             @Override
                             public void onSuccess() {
                                 terminate();
-                                user.setFullSpeed(false);
                                 println("Передача с номером "+number+" успешно завершена");
                             }
 

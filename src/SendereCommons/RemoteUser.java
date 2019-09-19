@@ -26,7 +26,6 @@ public abstract class RemoteUser {
     boolean disconnected = false;
     private long lastActivityTime;
     private long lastAliveTime;
-    private boolean fullSpeed = false;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -73,7 +72,6 @@ public abstract class RemoteUser {
                 int length;
                 try {
                     while (in.available()<4&&!disconnected){
-                        if(!fullSpeed)
                             Thread.sleep(500);
                     };
                     in.read(packetLength);
@@ -180,9 +178,5 @@ public abstract class RemoteUser {
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();
-    }
-
-    public void setFullSpeed(boolean fullSpeed){
-        this.fullSpeed = fullSpeed;
     }
 }
