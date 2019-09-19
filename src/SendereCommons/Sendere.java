@@ -2,6 +2,7 @@ package SendereCommons;
 
 import java.io.IOException;
 import java.net.*;
+import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -180,11 +181,14 @@ public abstract class Sendere {
     public abstract void onUserDisconnected(RemoteUser remoteUser);
 
     public void startReceiving() {
-        receiverThread = new Thread(new Runnable() {
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (allowReceiving) {
                     try {
+                        Socket userSocket = serverSocket.accept();
+                        if (userSocket==null)
+                            continue;
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
                             @Override
                             protected void onDisconnect() {
@@ -202,7 +206,7 @@ public abstract class Sendere {
                 }
             }
         });
-        receiverThread.start();
+        thread.start();
     }
 
     public void updateRemoteUsersList() {

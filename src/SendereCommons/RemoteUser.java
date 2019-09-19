@@ -7,9 +7,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import java.util.logging.Handler;
 
 public abstract class RemoteUser {
@@ -34,6 +32,14 @@ public abstract class RemoteUser {
 
     public RemoteUser(Socket socket) throws IOException {
         commonInitialization(socket);
+        Timer identifyTimer = new Timer();
+        identifyTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if(!identified)
+                    destroy();
+            }
+        },2000);
     }
 
     private void commonInitialization(Socket socket) throws IOException {
@@ -63,8 +69,7 @@ public abstract class RemoteUser {
                         read+=in.read(buffer, read, length-read);
                     onReceive(buffer, length);
                 } catch (SocketException e) {
-                    destroy();
-                    onDisconnect();
+                    onDisconnectInternal();
                 } catch (IOException e) {
                     //e.printStackTrace();
                 }
@@ -81,6 +86,12 @@ public abstract class RemoteUser {
         receiverThread.start();
     }
 
+    private void onDisconnectInternal(){
+        destroy();
+        if(isIdentified())
+            onDisconnect();
+    }
+
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
@@ -90,8 +101,7 @@ public abstract class RemoteUser {
             out.write(data);
             return true;
         } catch (SocketException e) {
-            destroy();
-            onDisconnect();
+            onDisconnectInternal();
         } catch (IOException e) {
             //e.printStackTrace();
         }
