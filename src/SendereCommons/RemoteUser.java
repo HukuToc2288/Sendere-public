@@ -23,8 +23,7 @@ public abstract class RemoteUser {
     private boolean identified = false;
     private InputStream in;
     private OutputStream out;
-    private boolean stopReceiving = false;
-    boolean inactive = false;
+    boolean disconnected = false;
     private long lastActivityTime;
     private long lastAliveTime;
 
@@ -40,7 +39,7 @@ public abstract class RemoteUser {
             @Override
             public void run() {
                 if(!identified)
-                    destroy();
+                    onDisconnectInternal();
             }
         },5000);
     }
@@ -67,12 +66,12 @@ public abstract class RemoteUser {
 
     private void doReceiving() {
         Thread receiverThread = new Thread(() -> {
-            while (!stopReceiving){
+            while (!disconnected){
                 int read;
                 byte[] packetLength = new byte[4];
                 int length;
                 try {
-                    while (in.available()<4&&!stopReceiving){
+                    while (in.available()<4&&!disconnected){
                         if(System.currentTimeMillis() > lastActivityTime+5000)
                             Thread.sleep(500);
                     };
@@ -84,7 +83,7 @@ public abstract class RemoteUser {
                         continue;
                     read = 0;
                     byte[] buffer = new byte[length];
-                    while (read<length&&!stopReceiving)
+                    while (read<length&&!disconnected)
                         read+=in.read(buffer, read, length-read);
                     if(!Arrays.equals(buffer, Headers.IM_ALIVE.getBytes())) {
                         onReceive(buffer, length);
@@ -114,7 +113,7 @@ public abstract class RemoteUser {
 
 
     private void onDisconnectInternal(){
-        destroy();
+        disconnected = true;
         if(isIdentified())
             onDisconnect();
     }
@@ -122,6 +121,8 @@ public abstract class RemoteUser {
     protected abstract void onDisconnect();
 
     public boolean sendMessage(byte[] data, int length){
+        if (disconnected)
+            return false;
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
         try {
             out.write(byteLength);
@@ -167,10 +168,6 @@ public abstract class RemoteUser {
     }
 
     public abstract void onReceive(byte[] buffer, int length);
-
-    public void destroy(){
-        stopReceiving = true;
-    }
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();
