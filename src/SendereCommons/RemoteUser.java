@@ -41,7 +41,7 @@ public abstract class RemoteUser {
                 if(!identified)
                     destroy();
             }
-        },2000);
+        },5000);
     }
 
     private void commonInitialization(Socket socket) throws IOException {
