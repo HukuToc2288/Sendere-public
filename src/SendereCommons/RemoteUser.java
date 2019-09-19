@@ -95,7 +95,7 @@ public abstract class RemoteUser {
                         onDisconnectInternal();
                 } catch (SocketException e) {
                     onDisconnectInternal();
-                } catch (IOException) {
+                } catch (IOException e) {
                     //e.printStackTrace();
                 }
             }
