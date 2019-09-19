@@ -120,7 +120,7 @@ public abstract class RemoteUser {
 
     protected abstract void onDisconnect();
 
-    public boolean sendMessage(byte[] data, int length){
+    public synchronized boolean sendMessage(byte[] data, int length){
         if (disconnected)
             return false;
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
