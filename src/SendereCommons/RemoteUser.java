@@ -58,15 +58,7 @@ public abstract class RemoteUser {
                 byte[] packetLength = new byte[4];
                 int length;
                 try {
-                    while (in.available()<4&&!stopReceiving){
-                        if(lastActivityTime+5000 < System.currentTimeMillis())
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                /*e.printStackTrace();*/
-                            }
-                    };
-                    lastActivityTime = System.currentTimeMillis();
+                    while (in.available()<4&&!stopReceiving);
                     in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
