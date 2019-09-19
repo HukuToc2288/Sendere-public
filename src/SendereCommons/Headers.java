@@ -13,6 +13,6 @@ public class Headers {
     public static final String CLOSE_FILE = "/CLSF";
     public static final String SEND_REQUEST = "/SDRT";
     public static final String SEND_RESPONSE = "/SDRE";
-    public static final String SEND_FEEDBACK = "/SDFB";
+    /*public static final String SEND_FEEDBACK = "/SDFB";*/
     public static final String SEND_COMPLETE = "/SDCT";
 }

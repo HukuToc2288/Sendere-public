@@ -90,35 +90,27 @@ public abstract class Sendere {
         } else if (receivedMessage[0].equals(Headers.MKFILE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createFile(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE));
+                transmission.createFile(receivedMessage[2]);
         } else if (receivedMessage[0].equals(Headers.MKDIR)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.createDirectory(receivedMessage[2]) ? Headers.TRUE : Headers.FALSE));
+                transmission.createDirectory(receivedMessage[2]);
         } else if (receivedMessage[0].equals(Headers.RAW_DATA)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
-                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.writeToFile(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length)) ? Headers.TRUE : Headers.FALSE));
+                transmission.writeToFile(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length));
             }
         } else if (receivedMessage[0].equals(Headers.CLOSE_FILE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null)
-                sendMessage(sender, Headers.SEND_FEEDBACK + "\n" + transmission.number + "\n" + (transmission.closeFile() ? Headers.TRUE : Headers.FALSE));
+                transmission.closeFile();
         } else if (receivedMessage[0].equals(Headers.SEND_COMPLETE)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {
                 transmission.onDone();
                 transmissionsIn.remove(transmission.number);
-            }
-        } else if (receivedMessage[0].equals(Headers.SEND_FEEDBACK)) {
-            TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[1]));
-            if (transmission != null) {
-                if (receivedMessage[2].equals(Headers.TRUE))
-                    transmission.onIntermediateSuccess();
-                else
-                    transmission.onFail();
             }
         }
     }
@@ -189,6 +181,7 @@ public abstract class Sendere {
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
                             @Override
                             protected void onDisconnect() {
+                                remoteUsers.remove(getHash());
                                 onUserDisconnected(this);
                             }
 

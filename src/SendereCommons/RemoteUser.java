@@ -113,6 +113,8 @@ public abstract class RemoteUser {
 
 
     private void onDisconnectInternal(){
+        if(disconnected)
+            return;
         disconnected = true;
         if(isIdentified())
             onDisconnect();
@@ -120,13 +122,18 @@ public abstract class RemoteUser {
 
     protected abstract void onDisconnect();
 
-    public synchronized boolean sendMessage(byte[] data, int length){
+    public boolean sendMessage(byte[] data, int length){
         if (disconnected)
             return false;
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
         try {
-            out.write(byteLength);
-            out.write(data);
+            //Don't pay attention on "Synchronization on a non-final field" warning
+            //output stream never changing even if javac can't understand it
+            //19.09.2019
+            synchronized (out) {
+                out.write(byteLength);
+                out.write(data);
+            }
             return true;
         } catch (SocketException e) {
             onDisconnectInternal();
