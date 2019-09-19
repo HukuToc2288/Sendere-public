@@ -186,9 +186,6 @@ public abstract class Sendere {
             public void run() {
                 while (allowReceiving) {
                     try {
-                        Socket userSocket = serverSocket.accept();
-                        if (userSocket==null)
-                            continue;
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
                             @Override
                             protected void onDisconnect() {

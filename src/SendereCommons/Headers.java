@@ -8,6 +8,7 @@ public class Headers {
     public static final String FALSE = "/FALS";
     public static final String MKDIR = "/MKDR";
     public static final String MKFILE = "/MKFL";
+    public static final String IM_ALIVE = "/IALV";
     public static final String RAW_DATA = "/RAWD";
     public static final String CLOSE_FILE = "/CLSF";
     public static final String SEND_REQUEST = "/SDRT";

@@ -25,7 +25,8 @@ public abstract class RemoteUser {
     private OutputStream out;
     private boolean stopReceiving = false;
     boolean inactive = false;
-    long lastActivityTime;
+    private long lastActivityTime;
+    private long lastAliveTime;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -48,7 +49,20 @@ public abstract class RemoteUser {
         this.socket = socket;
         in = socket.getInputStream();
         out = socket.getOutputStream();
+        lastActivityTime = System.currentTimeMillis();
+        lastAliveTime = System.currentTimeMillis();
         doReceiving();
+        doAlive();
+    }
+
+    private void doAlive() {
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                sendMessage(Headers.IM_ALIVE.getBytes(), Headers.IM_ALIVE.getBytes().length);
+            }
+        },2000);
     }
 
     private void doReceiving() {
@@ -58,6 +72,8 @@ public abstract class RemoteUser {
                 byte[] packetLength = new byte[4];
                 int length;
                 try {
+                    if(System.currentTimeMillis() > lastActivityTime+5000)
+                        Thread.sleep(500);
                     while (in.available()<4&&!stopReceiving);
                     in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
@@ -69,10 +85,16 @@ public abstract class RemoteUser {
                     byte[] buffer = new byte[length];
                     while (read<length&&!stopReceiving)
                         read+=in.read(buffer, read, length-read);
-                    onReceive(buffer, length);
+                    if(!Arrays.equals(buffer, Headers.IM_ALIVE.getBytes())) {
+                        onReceive(buffer, length);
+                    }else {
+                        lastAliveTime = System.currentTimeMillis();
+                    }
+                    if(System.currentTimeMillis() > lastAliveTime+4000)
+                        onDisconnectInternal();
                 } catch (SocketException e) {
                     onDisconnectInternal();
-                } catch (IOException e) {
+                } catch (IOException | InterruptedException e) {
                     //e.printStackTrace();
                 }
             }
@@ -151,5 +173,9 @@ public abstract class RemoteUser {
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();
+    }
+
+    public void setFullSpeed(){
+        lastActivityTime = System.currentTimeMillis();
     }
 }
