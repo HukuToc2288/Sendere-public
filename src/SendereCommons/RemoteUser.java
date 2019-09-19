@@ -24,6 +24,8 @@ public abstract class RemoteUser {
     private InputStream in;
     private OutputStream out;
     private boolean stopReceiving = false;
+    boolean inactive = false;
+    long lastActivityTime;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -52,11 +54,19 @@ public abstract class RemoteUser {
     private void doReceiving() {
         Thread receiverThread = new Thread(() -> {
             while (!stopReceiving){
-                int read = 0;
+                int read;
                 byte[] packetLength = new byte[4];
-                int length = packetLength.length;
+                int length;
                 try {
-                    while (in.available()<4&&!stopReceiving);
+                    while (in.available()<4&&!stopReceiving){
+                        if(lastActivityTime+5000 < System.currentTimeMillis())
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                /*e.printStackTrace();*/
+                            }
+                    };
+                    lastActivityTime = System.currentTimeMillis();
                     in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
@@ -85,6 +95,8 @@ public abstract class RemoteUser {
         });
         receiverThread.start();
     }
+
+
 
     private void onDisconnectInternal(){
         destroy();
