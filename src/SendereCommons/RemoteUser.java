@@ -73,8 +73,8 @@ public abstract class RemoteUser {
                 int length;
                 try {
                     while (in.available()<4&&!disconnected){
-                        /*if(!fullSpeed)
-                            Thread.sleep(500);*/
+                        if(!fullSpeed)
+                            Thread.sleep(500);
                     };
                     in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
@@ -93,7 +93,7 @@ public abstract class RemoteUser {
                     }
                     if(System.currentTimeMillis() > lastAliveTime+4000)
                         onDisconnectInternal();
-                } catch (SocketException e) {
+                } catch (SocketException | InterruptedException e) {
                     onDisconnectInternal();
                 } catch (IOException e) {
                     //e.printStackTrace();
