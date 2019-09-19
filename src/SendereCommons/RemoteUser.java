@@ -26,6 +26,7 @@ public abstract class RemoteUser {
     boolean disconnected = false;
     private long lastActivityTime;
     private long lastAliveTime;
+    private boolean fullSpeed = false;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -72,7 +73,7 @@ public abstract class RemoteUser {
                 int length;
                 try {
                     while (in.available()<4&&!disconnected){
-                        if(System.currentTimeMillis() > lastActivityTime+5000)
+                        if(!fullSpeed)
                             Thread.sleep(500);
                     };
                     in.read(packetLength);
@@ -136,6 +137,7 @@ public abstract class RemoteUser {
             }
             return true;
         } catch (SocketException e) {
+            e.printStackTrace();
             onDisconnectInternal();
         } catch (IOException e) {
             //e.printStackTrace();
@@ -180,7 +182,7 @@ public abstract class RemoteUser {
         return socket.getInetAddress().getHostAddress();
     }
 
-    public void setFullSpeed(){
-        lastActivityTime = System.currentTimeMillis();
+    public void setFullSpeed(boolean fullSpeed){
+        this.fullSpeed = fullSpeed;
     }
 }
