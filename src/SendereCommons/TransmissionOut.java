@@ -23,30 +23,11 @@ public abstract class TransmissionOut {
 
     public abstract void start();
 
-    public abstract void onIntermediateSuccess();
-
     public abstract void onFail();
 
     public abstract void onSuccess();
 
-    public void waitForResponse(){
-/*        synchronized (pauseLock) {
-            try {
-                pauseLock.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }*/
-    }
-
-    public void resume() {
-/*        synchronized (pauseLock) {
-            pauseLock.notifyAll(); // Unblocks thread
-        }*/
-    }
-
     public void terminate(){
         stop = true;
-        resume();
     }
 }

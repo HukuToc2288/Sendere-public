@@ -245,12 +245,6 @@ public class Main {
                             }
 
                             @Override
-                            public void onIntermediateSuccess() {
-                               /* resume();
-                                System.out.print("*");*/
-                            }
-
-                            @Override
                             public void onFail() {
                                 terminate();
                                 println("Передача с номером "+number+" не удалась");
@@ -268,7 +262,6 @@ public class Main {
                                     return;
                                 if(file.isDirectory()){
                                     sendere.createRemoteDirectory(currentRelativePath, this);
-                                    waitForResponse();
                                     if(stop)
                                         return;
                                     for (String name: file.list()){
@@ -277,7 +270,6 @@ public class Main {
                                 }else {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
-                                        waitForResponse();
                                         FileInputStream in = new FileInputStream(file);
                                         byte data[] = new byte[1024*1024];
                                         int dataLength;
@@ -287,7 +279,6 @@ public class Main {
                                             outputStream.write(prefix);
                                             outputStream.write(data);
                                             sendere.sendMessage(user, outputStream.toByteArray(), prefix.length+dataLength);
-                                            waitForResponse();
                                             if(stop)
                                                 return;
                                         }
