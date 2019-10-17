@@ -241,6 +241,7 @@ public class Main {
                             @Override
                             public void start() {
                                 recursiveSend(filename);
+                                sendere.sendMessage(user, Headers.SEND_COMPLETE+"\n"+number);
                                 onSuccess();
                             }
 
@@ -287,7 +288,6 @@ public class Main {
                                         e.printStackTrace();
                                     }
                                 }
-                                sendere.sendMessage(user, Headers.SEND_COMPLETE+"\n"+number);
                             }
                         };
                         sendere.addTransmissionOut(transmission);

@@ -131,11 +131,11 @@ public abstract class RemoteUser {
             //19.09.2019
             synchronized (out) {
                 out.write(byteLength);
-                out.write(data);
+                out.write(data, 0, length);
             }
             return true;
         } catch (SocketException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             onDisconnectInternal();
         } catch (IOException e) {
             //e.printStackTrace();
