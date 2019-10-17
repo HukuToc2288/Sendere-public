@@ -5,16 +5,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.util.*;
-import java.util.logging.Handler;
+import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public abstract class RemoteUser {
-
-    //It's almost 16MiB
-    //18.09.2019
-    public static final int BUFFER_LENGTH = 1024*1024*16-1;
 
     private String nickname;
     private long hash;
@@ -23,8 +18,7 @@ public abstract class RemoteUser {
     private boolean identified = false;
     private InputStream in;
     private OutputStream out;
-    boolean disconnected = false;
-    private long lastActivityTime;
+    private boolean disconnected = false;
     private long lastAliveTime;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
@@ -48,7 +42,6 @@ public abstract class RemoteUser {
         this.socket = socket;
         in = socket.getInputStream();
         out = socket.getOutputStream();
-        lastActivityTime = System.currentTimeMillis();
         lastAliveTime = System.currentTimeMillis();
         doReceiving();
         doAlive();
@@ -84,12 +77,11 @@ public abstract class RemoteUser {
                     byte[] buffer = new byte[length];
                     while (read<length&&!disconnected)
                         read+=in.read(buffer, read, length-read);
+                    lastAliveTime = System.currentTimeMillis();
                     if(!Arrays.equals(buffer, Headers.IM_ALIVE.getBytes())) {
                         onReceive(buffer, length);
-                    }else {
-                        lastAliveTime = System.currentTimeMillis();
                     }
-                    if(System.currentTimeMillis() > lastAliveTime+4000)
+                    if(System.currentTimeMillis() > lastAliveTime+5000)
                         onDisconnectInternal();
                 } catch (SocketException | InterruptedException e) {
                     onDisconnectInternal();
@@ -121,7 +113,7 @@ public abstract class RemoteUser {
 
     protected abstract void onDisconnect();
 
-    public boolean sendMessage(byte[] data, int length){
+    boolean sendMessage(byte[] data, int length){
         if (disconnected)
             return false;
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
@@ -143,14 +135,6 @@ public abstract class RemoteUser {
         return false;
     }
 
-    public void setPort(int port){
-        this.port = port;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
     @Override
     public String toString() {
         return nickname;
@@ -164,13 +148,13 @@ public abstract class RemoteUser {
         return hash;
     }
 
-    public void identify(String nickname, long hash){
+    void identify(String nickname, long hash){
         this.nickname = nickname;
         this.hash = hash;
         identified = true;
     }
 
-    public boolean isIdentified(){
+    private boolean isIdentified(){
         return identified;
     }
 

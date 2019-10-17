@@ -272,9 +272,9 @@ public class Main {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         FileInputStream in = new FileInputStream(file);
-                                        byte data[] = new byte[1024*1024];
+                                        byte[] data = new byte[1024*1024];
                                         int dataLength;
-                                        byte prefix[] = (Headers.RAW_DATA+"\n"+number+"\n").getBytes();
+                                        byte[] prefix = (Headers.RAW_DATA+"\n"+number+"\n").getBytes();
                                         while ((dataLength = in.read(data))!=-1){
                                             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
                                             outputStream.write(prefix);
