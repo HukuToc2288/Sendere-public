@@ -208,6 +208,8 @@ public abstract class Sendere {
         remoteUsers = new HashMap<>();
         for (SimpleNetworkInterface networkInterface : NetworkList.getNetworkList()) {
             int prefixLength = networkInterface.subnetPreffixLength;
+            if (prefixLength<24)
+                onInternalError(1,prefixLength+"");
             if (prefixLength == 32)
                 continue;
             if (networkInterface.stringAddress.equals("null"))
@@ -239,6 +241,7 @@ public abstract class Sendere {
                         try {
                             //System.out.println("checking "+InetAddress.getByAddress(tempAddress).getHostAddress());
                             byte[] tempByteAddress = intToByteArray(tempAddress);
+
                             if (InetAddress.getByAddress(tempByteAddress).isReachable(2000)) {
                                 boolean add = true;
                                 for (byte[] bytes : addressesToPing) {
@@ -312,6 +315,8 @@ public abstract class Sendere {
         service.shutdown();
         while (!service.isTerminated()) ;
     }
+
+    protected abstract void onInternalError(int code, String message);
 
     private byte[] intToByteArray(int[] ints) {
         byte[] bytes = new byte[ints.length];
