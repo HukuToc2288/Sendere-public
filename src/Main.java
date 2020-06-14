@@ -223,7 +223,7 @@ public class Main {
                             continue;
                         }
                         sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
-                    } else if (line.startsWith("speed ") && line.split(" ").length >= 3) {
+                    } else if (line.startsWith("speed ") && line.split(" ").length == 2) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
@@ -234,8 +234,15 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        while (true)
+                        println("Замеряем скорость с пользователем " + split[1] + "...r");
+                        int testDuration = 10;
+                        long endTime = System.currentTimeMillis() + testDuration*1000;
+                        int packetsSend = 0;
+                        while (System.currentTimeMillis() < endTime){
                             sendere.sendMessage(tempUser, new byte[1048576], 1048576);
+                            packetsSend++;
+                        }
+                        println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", (float)packetsSend/testDuration));
                     } else if (line.startsWith("send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
