@@ -39,7 +39,7 @@ public abstract class Sendere {
     private void onReceive(RemoteUser sender, byte[] buffer, int length) {
         String[] receivedMessage = new String(Arrays.copyOf(buffer, length)).split("\n");
         if (receivedMessage[0].equals(Headers.PING) && receivedMessage[1].equals(Headers.TRUE)) {
-            if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)
+            if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH && sender.getPort() == getMainPort())
                 return;
             sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
             remoteUsers.put(Long.parseLong(receivedMessage[3]), sender);
@@ -49,7 +49,7 @@ public abstract class Sendere {
                 sendMessage(sender, pongMessage);
             }
         } else if (receivedMessage[0].equals(Headers.PONG)) {
-            if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH)
+            if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH && sender.getPort() == getMainPort())
                 return;
             RemoteUser existingUser = remoteUsers.get(sender.getHash());
             if (existingUser != null) {
@@ -247,7 +247,7 @@ public abstract class Sendere {
                                         break;
                                     }
                                 }
-                                if (add && !Arrays.equals(networkInterface.byteAddress, tempByteAddress))
+                                if (add /*&& !Arrays.equals(networkInterface.byteAddress, tempByteAddress)*/)
                                     addressesToPing.add(tempByteAddress);
                             }
                         } catch (IOException e) {

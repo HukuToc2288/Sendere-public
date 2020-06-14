@@ -38,6 +38,10 @@ public abstract class RemoteUser {
         },5000);
     }
 
+    public int getPort(){
+        return socket.getPort();
+    }
+
     private void commonInitialization(Socket socket) throws IOException {
         this.socket = socket;
         in = socket.getInputStream();

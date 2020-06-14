@@ -190,7 +190,7 @@ public class Main {
                         }
                         continue;
                     }
-                    if (line.equals("/who")) {
+                    if (line.equals("who")) {
                         if (sendere.getRemoteUsers().size() == 0) {
                             println("Сейчас в лоакльной сети никого. Если это не так, убедитесь, что устройства находятся в одной локальной сети");
                             println("");
@@ -204,7 +204,19 @@ public class Main {
                             println("Локальнй адрес: " + tempUser.getAddress());
                             println("");
                         }
-                    } else if (line.startsWith("/tell ") && line.split(" ").length >= 3) {
+                    } else if (line.startsWith("tell ") && line.split(" ").length >= 3) {
+                        String[] split = line.split(" ", 3);
+                        RemoteUser tempUser;
+                        try {
+                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            if (tempUser==null)
+                                throw new Exception();
+                        } catch (Exception e) {
+                            println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
+                            continue;
+                        }
+                        sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
+                    } else if (line.startsWith("speed ") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
@@ -217,8 +229,7 @@ public class Main {
                         }
                         while (true)
                             sendere.sendMessage(tempUser, new byte[1048576], 1048576);
-                        //sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
-                    } else if (line.startsWith("/send") && line.split(" ").length >= 3) {
+                    } else if (line.startsWith("send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
