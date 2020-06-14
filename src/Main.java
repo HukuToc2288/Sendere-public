@@ -68,6 +68,13 @@ public class Main {
             public void onUserDisconnected(RemoteUser remoteUser) {
                 println("Пользователь "+remoteUser.getNickname()+" отключился");
             }
+
+            @Override
+            protected void onInternalError(int code, String message) {
+                if (code == 1){
+                    println("Поиск в данной сети может занять большое время. Рекомендуем ввести IP-адрес вручную ("+message+")");
+                }
+            }
         };
         println("Sendere запущен на порту "+sendere.getMainPort());
         println("Поиск устройств в сети...");
