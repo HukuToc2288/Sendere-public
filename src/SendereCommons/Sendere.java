@@ -27,9 +27,8 @@ public abstract class Sendere {
     private Thread receiverThread;
     private boolean allowReceiving = true;
     private boolean userReady = true;
-    private int newUserId = 0;
 
-    private HashMap<Long, RemoteUser> remoteUsers;
+    private RemoteUserList remoteUsers;
     private HashMap<Integer, TransmissionIn> transmissionsIn = new HashMap<Integer, TransmissionIn>();
     private HashMap<Integer, TransmissionOut> transmissionsOut = new HashMap<Integer, TransmissionOut>();
 
@@ -39,10 +38,10 @@ public abstract class Sendere {
     private void onReceive(RemoteUser sender, byte[] buffer, int length) {
         String[] receivedMessage = new String(Arrays.copyOf(buffer, length)).split("\n");
         if (receivedMessage[0].equals(Headers.PING) && receivedMessage[1].equals(Headers.TRUE)) {
-            if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH && sender.getPort() == getMainPort())
+            if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)
                 return;
             sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
-            remoteUsers.put(Long.parseLong(receivedMessage[3]), sender);
+            remoteUsers.put(sender);
             onRemoteUserConnected(sender);
             if (Settings.visibility == 1) {
                 String pongMessage = Headers.PONG + "\n" + Settings.nickname + "\n" + HASH;
@@ -51,12 +50,12 @@ public abstract class Sendere {
         } else if (receivedMessage[0].equals(Headers.PONG)) {
             if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH && sender.getPort() == getMainPort())
                 return;
-            RemoteUser existingUser = remoteUsers.get(sender.getHash());
+            RemoteUser existingUser = remoteUsers.getByHash(sender.getHash());
             if (existingUser != null) {
                 onRemoteUserUpdated(existingUser);
             } else {
                 sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
-                remoteUsers.put(Long.parseLong(receivedMessage[2]), sender);
+                remoteUsers.put(sender);
                 onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
@@ -184,8 +183,8 @@ public abstract class Sendere {
                         RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
                             @Override
                             protected void onDisconnect() {
-                                remoteUsers.remove(getHash());
                                 onUserDisconnected(this);
+                                remoteUsers.removeByHash(getHash());
                             }
 
                             @Override
@@ -205,7 +204,7 @@ public abstract class Sendere {
     public void updateRemoteUsersList() {
         ExecutorService service = Executors.newFixedThreadPool(256);
         ArrayList<byte[]> addressesToPing = new ArrayList<>();
-        remoteUsers = new HashMap<>();
+        remoteUsers = new RemoteUserList();
         for (SimpleNetworkInterface networkInterface : NetworkList.getNetworkList()) {
             int prefixLength = networkInterface.subnetPreffixLength;
             if (prefixLength<24)
@@ -295,8 +294,8 @@ public abstract class Sendere {
                             RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
                                 @Override
                                 protected void onDisconnect() {
-                                    remoteUsers.remove(this.getHash());
                                     onUserDisconnected(this);
+                                    remoteUsers.removeByHash(this.getHash());
                                 }
 
                                 @Override
@@ -351,7 +350,7 @@ public abstract class Sendere {
         return mainPort;
     }
 
-    public HashMap<Long, RemoteUser> getRemoteUsers() {
+    public RemoteUserList getRemoteUsers() {
         return remoteUsers;
     }
 

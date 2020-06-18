@@ -16,7 +16,7 @@ public class Main {
 
     public void main(String[] args) {
         try {
-            Settings.nickname = System.getProperty("user.name");
+            Settings.nickname = System.getProperty("user.name")+"@"+InetAddress.getLocalHost().getHostName();
         }catch (Exception e){
             //Keep default
         }
@@ -35,22 +35,22 @@ public class Main {
 
             @Override
             public void onRemoteUserConnected(RemoteUser user) {
-                println("Подключился пользователь "+user.getNickname());
+                println("Подключился пользователь "+user.getNickname()+" ["+sendere.getRemoteUsers().indexOf(user)+"]");
             }
 
             @Override
             public void onRemoteUserFound(RemoteUser user) {
-                println("Обнаружен пользователь "+user.getNickname());
+                println("Обнаружен пользователь "+user.getNickname()+" ["+sendere.getRemoteUsers().indexOf(user)+"]");
             }
 
             @Override
             public void onTextMessageReceived(RemoteUser who, String message) {
-                println("Сообщение от пользователя "+who.getNickname()+": "+message);
+                println("Сообщение от пользователя "+who.getNickname()+" ["+sendere.getRemoteUsers().indexOf(who)+"] : "+message);
             }
 
             @Override
             public void onSendRequest(InRequest request) {
-                println(String.format("Пользователь %1$s хочет передать вам %2$s %3$s. Принять?", request.who, request.isDirectory ? "директорию" : "файл", request.filename));
+                println(String.format("Пользователь %s [%d] хочет передать вам %s %s. Принять?", request.who, sendere.getRemoteUsers().indexOf(request.who), request.isDirectory ? "директорию" : "файл", request.filename));
                 tempInRequest = request;
                 question = true;
             }
@@ -66,7 +66,7 @@ public class Main {
 
             @Override
             public void onUserDisconnected(RemoteUser remoteUser) {
-                println("Пользователь "+remoteUser.getNickname()+" отключился");
+                println("Пользователь "+remoteUser.getNickname()+" ["+sendere.getRemoteUsers().indexOf(remoteUser)+"] отключился");
             }
 
             @Override
@@ -205,17 +205,21 @@ public class Main {
                         }
                         println("Пользователи в сети:");
                         println("");
-                        for (RemoteUser tempUser: sendere.getRemoteUsers().values()) {
-                            println("Пользователь " + tempUser.getHash() + ":");
-                            println("Никнейм: " + tempUser.getNickname());
-                            println("Локальнй адрес: " + tempUser.getAddress());
+                        RemoteUserList users = sendere.getRemoteUsers();
+                        for (int i=0; i< users.size(); i++) {
+                            if (users.get(i) == null)
+                                continue;
+                            println("Пользователь " + i + ":");
+                            println("Хэш-сумма:" +users.get(i).getHash());
+                            println("Никнейм: " + users.get(i).getNickname());
+                            println("Локальнй адрес: " + users.get(i).getAddress());
                             println("");
                         }
                     } else if (line.startsWith("tell ") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
-                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
                             if (tempUser==null)
                                 throw new Exception();
                         } catch (Exception e) {
@@ -227,14 +231,14 @@ public class Main {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
-                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
                             if (tempUser==null)
                                 throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        println("Замеряем скорость с пользователем " + split[1] + "...r");
+                        println("Замеряем скорость с пользователем " +sendere.getRemoteUsers().get(Integer.parseInt(split[1]))+" ["+split[1] + "]...");
                         int testDuration = 10;
                         long endTime = System.currentTimeMillis() + testDuration*1000;
                         int packetsSend = 0;
@@ -247,7 +251,7 @@ public class Main {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
-                            tempUser = sendere.getRemoteUsers().get(Long.parseLong(split[1]));
+                            tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
                             if (tempUser==null)
                                 throw new Exception();
                         } catch (Exception e) {
