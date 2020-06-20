@@ -114,6 +114,18 @@ public abstract class Sendere {
                 transmission.onDone();
                 transmissionsIn.remove(transmission.number);
             }
+        } else if (receivedMessage[0].equals(Headers.GZIP_DATA)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+            if (transmission != null) {
+                //This line allows to write packet data into file and send feedback about operation success
+                //28.08.2019
+                try {
+                    transmission.writeToFile(GzipUtils.unzip(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length)));
+                } catch (IOException e) {
+                    //fail
+                    e.printStackTrace();
+                }
+            }
         }
     }
 

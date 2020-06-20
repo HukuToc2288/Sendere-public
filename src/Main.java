@@ -10,19 +10,20 @@ public class Main {
     private Scanner scanner;
     private boolean question = false;
     private boolean allow = false;
+    private boolean allowGzip = true;
     private InRequest tempInRequest;
 
     private HashSet<String> blacklistIPs = new HashSet<String>();
 
     public void main(String[] args) {
         try {
-            Settings.nickname = System.getProperty("user.name")+"@"+InetAddress.getLocalHost().getHostName();
-        }catch (Exception e){
+            Settings.nickname = System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
             //Keep default
         }
         println("Сбор даннных о сетевых интерфесах...");
         NetworkList.updateList();
-        if(NetworkList.getNetworkList().length==0){
+        if (NetworkList.getNetworkList().length == 0) {
             println("Ваше устройство не педключено ни к одной сети");
             System.exit(0);
         }
@@ -35,17 +36,17 @@ public class Main {
 
             @Override
             public void onRemoteUserConnected(RemoteUser user) {
-                println("Подключился пользователь "+user.getNickname()+" ["+sendere.getRemoteUsers().indexOf(user)+"]");
+                println("Подключился пользователь " + user.getNickname() + " [" + sendere.getRemoteUsers().indexOf(user) + "]");
             }
 
             @Override
             public void onRemoteUserFound(RemoteUser user) {
-                println("Обнаружен пользователь "+user.getNickname()+" ["+sendere.getRemoteUsers().indexOf(user)+"]");
+                println("Обнаружен пользователь " + user.getNickname() + " [" + sendere.getRemoteUsers().indexOf(user) + "]");
             }
 
             @Override
             public void onTextMessageReceived(RemoteUser who, String message) {
-                println("Сообщение от пользователя "+who.getNickname()+" ["+sendere.getRemoteUsers().indexOf(who)+"] : "+message);
+                println("Сообщение от пользователя " + who.getNickname() + " [" + sendere.getRemoteUsers().indexOf(who) + "] : " + message);
             }
 
             @Override
@@ -57,26 +58,26 @@ public class Main {
 
             @Override
             public void onSendResponse(boolean allow, TransmissionOut transmission) {
-                if(allow){
-                    println("Передача "+transmission.number+" начата");
-                }else {
-                    println("Передача "+transmission.number+" отклонена");
+                if (allow) {
+                    println("Передача " + transmission.number + " начата");
+                } else {
+                    println("Передача " + transmission.number + " отклонена");
                 }
             }
 
             @Override
             public void onUserDisconnected(RemoteUser remoteUser) {
-                println("Пользователь "+remoteUser.getNickname()+" ["+sendere.getRemoteUsers().indexOf(remoteUser)+"] отключился");
+                println("Пользователь " + remoteUser.getNickname() + " [" + sendere.getRemoteUsers().indexOf(remoteUser) + "] отключился");
             }
 
             @Override
             protected void onInternalError(int code, String message) {
-                if (code == 1){
-                    println("Поиск в данной сети может занять большое время. Рекомендуем ввести IP-адрес вручную ("+message+")");
+                if (code == 1) {
+                    println("Поиск в данной сети может занять большое время. Рекомендуем ввести IP-адрес вручную (" + message + ")");
                 }
             }
         };
-        println("Sendere запущен на порту "+sendere.getMainPort());
+        println("Sendere запущен на порту " + sendere.getMainPort());
         println("Поиск устройств в сети...");
         sendere.updateRemoteUsersList();
         println("");
@@ -206,11 +207,11 @@ public class Main {
                         println("Пользователи в сети:");
                         println("");
                         RemoteUserList users = sendere.getRemoteUsers();
-                        for (int i=0; i< users.size(); i++) {
+                        for (int i = 0; i < users.size(); i++) {
                             if (users.get(i) == null)
                                 continue;
                             println("Пользователь " + i + ":");
-                            println("Хэш-сумма:" +users.get(i).getHash());
+                            println("Хэш-сумма:" + users.get(i).getHash());
                             println("Никнейм: " + users.get(i).getNickname());
                             println("Локальнй адрес: " + users.get(i).getAddress());
                             println("");
@@ -220,7 +221,7 @@ public class Main {
                         RemoteUser tempUser;
                         try {
                             tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
-                            if (tempUser==null)
+                            if (tempUser == null)
                                 throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
@@ -232,87 +233,104 @@ public class Main {
                         RemoteUser tempUser;
                         try {
                             tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
-                            if (tempUser==null)
+                            if (tempUser == null)
                                 throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        println("Замеряем скорость с пользователем " +sendere.getRemoteUsers().get(Integer.parseInt(split[1]))+" ["+split[1] + "]...");
+                        println("Замеряем скорость с пользователем " + sendere.getRemoteUsers().get(Integer.parseInt(split[1])) + " [" + split[1] + "]...");
                         int testDuration = 10;
-                        long endTime = System.currentTimeMillis() + testDuration*1000;
+                        long endTime = System.currentTimeMillis() + testDuration * 1000;
                         int packetsSend = 0;
-                        while (System.currentTimeMillis() < endTime){
+                        while (System.currentTimeMillis() < endTime) {
                             sendere.sendMessage(tempUser, new byte[1048576], 1048576);
                             packetsSend++;
                         }
-                        println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", (float)packetsSend/testDuration));
+                        println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", (float) packetsSend / testDuration));
                     } else if (line.startsWith("send") && line.split(" ").length >= 3) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
                         try {
                             tempUser = sendere.getRemoteUsers().get(Integer.parseInt(split[1]));
-                            if (tempUser==null)
+                            if (tempUser == null)
                                 throw new Exception();
                         } catch (Exception e) {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
 
-                        if(!new File(split[2]).exists()){
+                        if (!new File(split[2]).exists()) {
                             println(String.format("Файла %1$s не существует", split[2]));
                             continue;
                         }
 
                         //Надо переделать расчёт номера передачи
-                        TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), (int)(System.currentTimeMillis()), split[2]) {
+                        TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), (int) (System.currentTimeMillis()), split[2]) {
 
                             @Override
                             public void start() {
                                 recursiveSend(filename);
-                                sendere.sendMessage(user, Headers.SEND_COMPLETE+"\n"+number);
+                                sendere.sendMessage(user, Headers.SEND_COMPLETE + "\n" + number);
                                 onSuccess();
                             }
 
                             @Override
                             public void onFail() {
                                 terminate();
-                                println("Передача с номером "+number+" не удалась");
+                                println("Передача с номером " + number + " не удалась");
                             }
 
                             @Override
                             public void onSuccess() {
                                 terminate();
-                                println("Передача с номером "+number+" успешно завершена");
+                                println("Передача с номером " + number + " успешно завершена");
                             }
 
-                            private void recursiveSend(String currentRelativePath){
-                                File file = new File(rooDirectory+ "/" +currentRelativePath);
-                                if(!file.exists())
+                            private void recursiveSend(String currentRelativePath) {
+                                File file = new File(rooDirectory + "/" + currentRelativePath);
+                                if (!file.exists())
                                     return;
-                                if(file.isDirectory()){
+                                if (file.isDirectory()) {
                                     sendere.createRemoteDirectory(currentRelativePath, this);
-                                    if(stop)
+                                    if (stop)
                                         return;
-                                    for (String name: file.list()){
-                                        recursiveSend(currentRelativePath+"/"+name);
+                                    for (String name : file.list()) {
+                                        recursiveSend(currentRelativePath + "/" + name);
                                     }
-                                }else {
+                                } else {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         FileInputStream in = new FileInputStream(file);
-                                        byte[] data = new byte[1024*1024];
+                                        byte[] data = new byte[1024 * 1024 * (allowGzip ? 4 : 1)];
                                         int dataLength;
-                                        byte[] prefix = (Headers.RAW_DATA+"\n"+number+"\n").getBytes();
-                                        while ((dataLength = in.read(data))!=-1){
-                                            ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-                                            outputStream.write(prefix);
-                                            outputStream.write(data);
-                                            sendere.sendMessage(user, outputStream.toByteArray(), prefix.length+dataLength);
-                                            if(stop)
+                                        byte[] prefix = (Headers.RAW_DATA + "\n" + number + "\n").getBytes();
+                                        byte[] gzipPrefix = (Headers.GZIP_DATA + "\n" + number + "\n").getBytes();
+                                        while ((dataLength = in.read(data)) != -1) {
+                                            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                                            if (allowGzip){
+                                                byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
+                                                for (int i = 0; i < gdatas.length; i++) {
+                                                    if (gdatas[i].length < dataLength){
+                                                        outputStream.write(gzipPrefix);
+                                                        outputStream.write(gdatas[i]);
+                                                    } else {
+                                                        //If we don't managed to make compressed block size lower than original
+                                                        //20.06.2020
+                                                        outputStream.write(prefix);
+                                                        outputStream.write(data);
+                                                    }
+                                                    sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                                }
+                                            }else {
+                                                outputStream.write(prefix);
+                                                outputStream.write(data);
+                                                sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                            }
+                                            if (stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(user, Headers.CLOSE_FILE+"\n"+number);
+                                        sendere.sendMessage(user, Headers.CLOSE_FILE + "\n" + number);
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }
@@ -334,11 +352,11 @@ public class Main {
     }
 
 
-    public void println(String msg){
-            System.out.println(msg);
-        }
+    public void println(String msg) {
+        System.out.println(msg);
+    }
 
-    public String readLine(){
+    public String readLine() {
         return scanner.nextLine();
     }
 }

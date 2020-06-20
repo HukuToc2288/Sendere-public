@@ -15,4 +15,6 @@ public class Headers {
     public static final String SEND_RESPONSE = "/SDRE";
     /*public static final String SEND_FEEDBACK = "/SDFB";*/
     public static final String SEND_COMPLETE = "/SDCT";
+
+    public static final String GZIP_DATA = "/RAWZ";
 }
