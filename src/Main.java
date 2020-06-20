@@ -307,25 +307,31 @@ public class Main {
                                         byte[] prefix = (Headers.RAW_DATA + "\n" + number + "\n").getBytes();
                                         byte[] gzipPrefix = (Headers.GZIP_DATA + "\n" + number + "\n").getBytes();
                                         while ((dataLength = in.read(data)) != -1) {
-                                            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                                            ByteArrayOutputStream outputStream;
                                             if (allowGzip){
                                                 byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
                                                 for (int i = 0; i < gdatas.length; i++) {
                                                     if (gdatas[i].length < dataLength){
+                                                        outputStream = new ByteArrayOutputStream();
                                                         outputStream.write(gzipPrefix);
                                                         outputStream.write(gdatas[i]);
+                                                        sendere.sendMessage(user, outputStream.toByteArray(), gzipPrefix.length + gdatas[i].length);
                                                     } else {
                                                         //If we don't managed to make compressed block size lower than original
                                                         //20.06.2020
+                                                        outputStream = new ByteArrayOutputStream();
                                                         outputStream.write(prefix);
                                                         outputStream.write(data);
+                                                        sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
                                                     }
-                                                    sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                                    outputStream.close();
                                                 }
                                             }else {
+                                                outputStream = new ByteArrayOutputStream();
                                                 outputStream.write(prefix);
                                                 outputStream.write(data);
                                                 sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                                outputStream.close();
                                             }
                                             if (stop)
                                                 return;
