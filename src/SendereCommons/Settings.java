@@ -20,5 +20,23 @@ public class Settings {
      * Directory where received files will be placed
      * Path has to be in UNIX style
      */
-    public static String receivedDir = System.getProperty("user.home");
+    public static String receivingDir = System.getProperty("user.home");
+
+    /**
+     * Show that user allows to receive text messages
+     * If set to {@code true}, when packet with {@link Headers#TEXT} header will be received,
+     * {@link Sendere#onTextMessageReceived} implementation will be invoked
+     * Otherwise, nothing happens
+     * Also when user sends text message when this parameter set to false, he should be
+     * warned, that he won't be able to receive answer
+     */
+    public static boolean allowChat = true;
+
+    /**
+     * Show that user allows to receive files and directories
+     * If set to {@code true}, {@link Sendere#onSendRequest} will be invoked when user ready to answer it
+     * Otherwise, send request will be automatically processed as denied
+     * @see Sendere#processSendRequest
+     */
+    public static boolean allowReceiving = true;
 }

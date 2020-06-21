@@ -59,15 +59,26 @@ public abstract class Sendere {
                 onRemoteUserFound(sender);
             }
         } else if (receivedMessage[0].equals(Headers.TEXT)) {
-            onTextMessageReceived(sender, receivedMessage[1]);
+            if (Settings.allowChat)
+                onTextMessageReceived(sender, receivedMessage[1]);
         } else if ((receivedMessage[0].equals(Headers.SEND_REQUEST))) {
-            InRequest request = new InRequest(sender, receivedMessage[1].equals(Headers.TRUE), Integer.parseInt(receivedMessage[2]), receivedMessage[3]);
-            if (userReady) {
-                userReady = false;
-                currentInRequest = request;
-                onSendRequest(request);
+            if (!Settings.allowReceiving){
+                // TODO: 21.06.2020 make special message if user don't allows to receive files
+                /*
+                 * Now requests process as it canceled by user, so sender unable to determine
+                 * if request really was canceled by user or user don't allows to receive files at all
+                 * 21.06.2020 huku
+                 */
+                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, Integer.parseInt(receivedMessage[2])));
             } else {
-                inRequests.add(request);
+                InRequest request = new InRequest(sender, receivedMessage[1].equals(Headers.TRUE), Integer.parseInt(receivedMessage[2]), receivedMessage[3]);
+                if (userReady) {
+                    userReady = false;
+                    currentInRequest = request;
+                    onSendRequest(request);
+                } else {
+                    inRequests.add(request);
+                }
             }
         } else if (receivedMessage[0].equals(Headers.SEND_RESPONSE)) {
             TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[2]));

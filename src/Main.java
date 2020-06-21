@@ -162,36 +162,7 @@ public class Main {
                             println("Приём начат с идентификатором " + transmission.number);
                         } else if (line.equals("no")) {
                             question = false;
-                            sendere.processSendRequest(false, new TransmissionIn(tempInRequest.who, tempInRequest.transmissionId) {
-                                @Override
-                                public boolean createDirectory(String relativePath) {
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean createFile(String relativePath) {
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean writeToFile(byte[] data) {
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean closeFile() {
-                                    return false;
-                                }
-
-                                @Override
-                                public void onUpdateTransmissionSize(long size) {
-
-                                }
-
-                                @Override
-                                public void onDone() {
-                                }
-                            });
+                            sendere.processSendRequest(false, TransmissionIn.createDummyTransmission(tempInRequest.who, tempInRequest.transmissionId));
                             println("Приём отклонён");
                         } else {
                             println("Ответьте yes или no");
@@ -228,6 +199,9 @@ public class Main {
                             continue;
                         }
                         sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
+                        println("Сообщение отправлено");
+                        if (!Settings.allowChat)
+                            println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ");
                     } else if (line.startsWith("speed ") && line.split(" ").length == 2) {
                         String[] split = line.split(" ", 3);
                         RemoteUser tempUser;
@@ -318,7 +292,7 @@ public class Main {
                                                         sendere.sendMessage(user, outputStream.toByteArray(), gzipPrefix.length + gdatas[i].length);
                                                     } else {
                                                         //If we don't managed to make compressed block size lower than original
-                                                        //20.06.2020
+                                                        //20.06.2020 huku
                                                         outputStream = new ByteArrayOutputStream();
                                                         outputStream.write(prefix);
                                                         outputStream.write(data);

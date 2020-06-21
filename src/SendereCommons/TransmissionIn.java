@@ -16,19 +16,61 @@ public abstract class TransmissionIn {
 
     public TransmissionIn(RemoteUser user, int id){
         this.user = user;
-        this.rootDir = Settings.receivedDir;
+        this.rootDir = Settings.receivingDir;
         number = id;
     }
 
     /**
-     * Calls when need to create directory
+     * Creates transmission with all methods empty
+     * This method using when we don't actually want to receive something, but have to create transmission to deny it
+     * and there is no need to implement any methods
+     * @param user user who want to send files
+     * @param id unique id by which transmission can be determined
+     * @return transmission with empty methods
+     */
+    public static TransmissionIn createDummyTransmission(RemoteUser user, int id){
+        return new TransmissionIn(user, id) {
+            @Override
+            public boolean createDirectory(String relativePath) {
+                return false;
+            }
+
+            @Override
+            public boolean createFile(String relativePath) {
+                return false;
+            }
+
+            @Override
+            public boolean writeToFile(byte[] data) {
+                return false;
+            }
+
+            @Override
+            public boolean closeFile() {
+                return false;
+            }
+
+            @Override
+            public void onUpdateTransmissionSize(long size) {
+
+            }
+
+            @Override
+            public void onDone() {
+
+            }
+        };
+    }
+
+    /**
+     * Calls when sender requested to create directory
      * @param relativePath file path relative to root transmission's directory
      * @return {@code true} on success, if returned {@code false} operation should be terminated
      */
     public abstract boolean createDirectory(String relativePath);
 
     /**
-     * Calls when need to create file
+     * Calls when sender requested to create file
      * @param relativePath file path relative to root transmission's directory
      * @return {@code true} on success, if returned {@code false} operation should be terminated
      */
@@ -42,15 +84,14 @@ public abstract class TransmissionIn {
     public abstract boolean writeToFile(byte[] data);
 
     /**
-     * Calls when need to close file that was opened early by {@code createFile}
+     * Calls when need to close file that was opened early by {@link #createFile}
      * @see #createFile(String)
      */
     public abstract boolean closeFile();
 
     /**
-     * Calls when remote user notify about total files size that need to be send by this transmission
+     * Calls when remote user notify about total size of files will be send by this transmission
      * Note that actual progress not updating by Sendere, so it should be calculated by external stuff
-     * Sorry for my bad english, I'm just B2
      * @param size total transaction size in bytes
      */
     public abstract void onUpdateTransmissionSize(long size);
