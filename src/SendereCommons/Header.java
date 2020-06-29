@@ -7,9 +7,26 @@ import java.util.Objects;
 
 public class Header {
     private byte[] content;
+    private int minVersion = 0;
+    private int maxVersion = Integer.MAX_VALUE;
 
     public Header(String content){
         this.content = content.getBytes();
+    }
+
+    public Header(String content, int minVersion){
+        this.content = content.getBytes();
+        this.minVersion = minVersion;
+    }
+
+    public Header(String content, int minVersion, int maxVersion){
+        this.content = content.getBytes();
+        this.minVersion = minVersion;
+        this.maxVersion = maxVersion;
+    }
+
+    boolean isSupported(int version){
+        return version>=minVersion && version <= maxVersion;
     }
 
     public Header(byte[] content){

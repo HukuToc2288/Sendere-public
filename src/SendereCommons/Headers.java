@@ -1,6 +1,9 @@
 package SendereCommons;
 
 public class Headers {
+
+    // Start for headers supported in all Sendere versions
+
     public static final Header PING = new Header("PING");
     public static final Header PONG = new Header("PONG");
     public static final Header TEXT = new Header("TEXT");
@@ -17,5 +20,5 @@ public class Headers {
     public static final Header SEND_COMPLETE = new Header("SDCT");
     public static final Header SPEED_MEASURE = new Header("SPDM");
 
-
+    // End for headers supported in all Sendere versions
 }

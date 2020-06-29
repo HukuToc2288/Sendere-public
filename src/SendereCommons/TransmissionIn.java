@@ -6,6 +6,7 @@ public abstract class TransmissionIn {
     public final RemoteUser user;
     public final String rootDir;
     public final int number;
+    public long realData = 0 ;
     private String currentRelativePath;
 
     public TransmissionIn(RemoteUser user, int id, String rootDir){

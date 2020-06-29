@@ -14,9 +14,31 @@ public abstract class Sendere {
     public static final int START_PORT = 1337;
     public static final int END_PORT = 1356;
 
+    /*
+     Those constants defines the version of Sendere library
 
-    public static final int VERSION = 000001001;
+     Minor version shows little changes in library which don't affect commands structure
+     and makes only internal changes
+     It usually can be ignored in version check
 
+     Middle version shows that some commands have been added or changed but Sendere still
+     can work some way with clients having another middle version
+     Middle version should be checked when sending commands and if remote client cannot handle
+     some request user should be notified about it
+
+     Major version shows that significant changes have been made since previous and their significance
+     doesn't allow clients with different versions to normally work together
+     This version should be checked when discovering clients in network and Sendere shouldn't allow any
+     communication between users if it mismatch
+
+     VERSION is a version code in 3-byte format that can be used for sending or something
+
+     29.06.2020 huku
+     */
+    public static final int MAJOR_VERSION = 0;
+    public static final int MIDDLE_VERSION = 0;
+    public static final int MINOR_VERSION = 1;
+    public static final int VERSION = MAJOR_VERSION<<16+MIDDLE_VERSION<<8+MINOR_VERSION;
     /**
      * Size in bytes of oncoming and incoming messages that should be used instead of
      * hardcoded value.
@@ -141,6 +163,7 @@ public abstract class Sendere {
                 //28.08.2019
                 try {
                     int offset = receivedMessage[0].getBytes().length + "\n".length();
+                    transmission.realData+=length-offset;
                     transmission.writeToFile(GzipUtils.unzip(data, offset, length-offset));
                 } catch (IOException e) {
                     //fail

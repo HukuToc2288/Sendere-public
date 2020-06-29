@@ -157,7 +157,7 @@ public class Main {
                                 public void onDone() {
                                     int totalTime = (int) ((System.currentTimeMillis()-startTime)/1000);
                                     println(String.format("Приём %1$d успешно завершён", number));
-                                    println(String.format("Средняя скорость приёма %.2f МБ/с", (double)totalBytesReceived/1024/1024/totalTime));
+                                    println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", ((double)totalBytesReceived)/1024/1024/totalTime, ((double)realData)/1024/1024/totalTime));
                                 }
                             };
 
