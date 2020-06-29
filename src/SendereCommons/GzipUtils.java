@@ -59,8 +59,8 @@ public class GzipUtils {
         return false;
     }
 
-    public static byte[] unzip(byte[] gdata) throws IOException {
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(gdata);
+    public static byte[] unzip(byte[] gdata, int off, int len) throws IOException {
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(gdata,off, len);
         BufferedInputStream gzipInputStream = new BufferedInputStream(new GZIPInputStream(byteArrayInputStream));
         byte[] data = gzipInputStream.readAllBytes();
         gzipInputStream.close();

@@ -10,9 +10,7 @@ public class Main {
     private Scanner scanner;
     private boolean question = false;
     private boolean allow = false;
-    private boolean allowGzip = true;
     private InRequest tempInRequest;
-
     private HashSet<String> blacklistIPs = new HashSet<String>();
 
     public void main(String[] args) {
@@ -94,6 +92,8 @@ public class Main {
                             TransmissionIn transmission = new TransmissionIn(tempInRequest.who, tempInRequest.transmissionId) {
 
                                 private FileOutputStream writer;
+                                long startTime = System.currentTimeMillis();
+                                long totalBytesReceived = 0;
 
                                 @Override
                                 public boolean createDirectory(String relativePath) {
@@ -128,9 +128,10 @@ public class Main {
                                 }
 
                                 @Override
-                                public boolean writeToFile(byte[] data) {
+                                public boolean writeToFile(byte[] data, int off, int len) {
                                     try {
-                                        writer.write(data);
+                                        writer.write(data,off, len);
+                                        totalBytesReceived+=len-off;
                                         return true;
                                     } catch (IOException e) {
                                         return false;
@@ -154,7 +155,9 @@ public class Main {
 
                                 @Override
                                 public void onDone() {
+                                    int totalTime = (int) ((System.currentTimeMillis()-startTime)/1000);
                                     println(String.format("Приём %1$d успешно завершён", number));
+                                    println(String.format("Средняя скорость приёма %.2f МБ/с", (double)totalBytesReceived/1024/1024/totalTime));
                                 }
                             };
 
@@ -198,7 +201,7 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        sendere.sendMessage(tempUser, Headers.TEXT + "\n" + split[2]);
+                        sendere.sendMessage(tempUser, Headers.TEXT, split[2]);
                         println("Сообщение отправлено");
                         if (!Settings.allowChat)
                             println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ");
@@ -218,7 +221,7 @@ public class Main {
                         long endTime = System.currentTimeMillis() + testDuration * 1000;
                         int packetsSend = 0;
                         while (System.currentTimeMillis() < endTime) {
-                            sendere.sendMessage(tempUser, new byte[1048576], 1048576);
+                            sendere.sendMessage(tempUser, Headers.SPEED_MEASURE, new byte[1048572], 1048572);
                             packetsSend++;
                         }
                         println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", (float) packetsSend / testDuration));
@@ -245,7 +248,7 @@ public class Main {
                             @Override
                             public void start() {
                                 recursiveSend(filename);
-                                sendere.sendMessage(user, Headers.SEND_COMPLETE + "\n" + number);
+                                sendere.sendMessage(user, Headers.SEND_COMPLETE, String.valueOf(number));
                                 onSuccess();
                             }
 
@@ -276,27 +279,27 @@ public class Main {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         FileInputStream in = new FileInputStream(file);
-                                        byte[] data = new byte[1024 * 1024 * (allowGzip ? 4 : 1)];
+                                        byte[] data = new byte[1024 * 1024 * (Settings.allowGzip ? 4 : 1)];
                                         int dataLength;
-                                        byte[] prefix = (Headers.RAW_DATA + "\n" + number + "\n").getBytes();
-                                        byte[] gzipPrefix = (Headers.GZIP_DATA + "\n" + number + "\n").getBytes();
+                                        byte[] prefix = (number + "\n").getBytes();
+                                        byte[] gzipPrefix = (number + "\n").getBytes();
                                         while ((dataLength = in.read(data)) != -1) {
                                             ByteArrayOutputStream outputStream;
-                                            if (allowGzip){
+                                            if (Settings.allowGzip){
                                                 byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
                                                 for (int i = 0; i < gdatas.length; i++) {
+                                                    outputStream = new ByteArrayOutputStream();
                                                     if (gdatas[i].length < dataLength){
-                                                        outputStream = new ByteArrayOutputStream();
                                                         outputStream.write(gzipPrefix);
                                                         outputStream.write(gdatas[i]);
-                                                        sendere.sendMessage(user, outputStream.toByteArray(), gzipPrefix.length + gdatas[i].length);
+                                                        sendere.sendMessage(user, Headers.GZIP_DATA, outputStream.toByteArray(), gdatas[i].length+gzipPrefix.length);
                                                     } else {
                                                         //If we don't managed to make compressed block size lower than original
                                                         //20.06.2020 huku
                                                         outputStream = new ByteArrayOutputStream();
                                                         outputStream.write(prefix);
                                                         outputStream.write(data);
-                                                        sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                                        sendere.sendMessage(user, Headers.RAW_DATA,outputStream.toByteArray(), prefix.length + dataLength);
                                                     }
                                                     outputStream.close();
                                                 }
@@ -304,13 +307,13 @@ public class Main {
                                                 outputStream = new ByteArrayOutputStream();
                                                 outputStream.write(prefix);
                                                 outputStream.write(data);
-                                                sendere.sendMessage(user, outputStream.toByteArray(), prefix.length + dataLength);
+                                                sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
                                                 outputStream.close();
                                             }
                                             if (stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(user, Headers.CLOSE_FILE + "\n" + number);
+                                        sendere.sendMessage(user, Headers.CLOSE_FILE , String.valueOf(number));
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }

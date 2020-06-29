@@ -39,4 +39,12 @@ public class Settings {
      * @see Sendere#processSendRequest
      */
     public static boolean allowReceiving = true;
+
+    // TODO make Sendere be able to detect another instances on computer
+    // 29.06.2020 huku
+    public static boolean allowMultiLaunch = true;
+
+    // TODO document it
+    // 29.06.2020 huku
+    public static boolean allowGzip = true;
 }

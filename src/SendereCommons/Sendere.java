@@ -2,7 +2,6 @@ package SendereCommons;
 
 import java.io.IOException;
 import java.net.*;
-import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,6 +13,9 @@ public abstract class Sendere {
     //21.08.2019
     public static final int START_PORT = 1337;
     public static final int END_PORT = 1356;
+
+
+    public static final int VERSION = 000001001;
 
     /**
      * Size in bytes of oncoming and incoming messages that should be used instead of
@@ -35,33 +37,39 @@ public abstract class Sendere {
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
 
-    private void onReceive(RemoteUser sender, byte[] buffer, int length) {
-        String[] receivedMessage = new String(Arrays.copyOf(buffer, length)).split("\n");
-        if (receivedMessage[0].equals(Headers.PING) && receivedMessage[1].equals(Headers.TRUE)) {
-            if (receivedMessage[2].equals(Settings.nickname) && Long.parseLong(receivedMessage[3]) == HASH)
+    private void onReceive(RemoteUser sender, byte[] bytesHeader, byte[] data, int length) {
+        String[] receivedMessage = new String(Arrays.copyOf(data, length)).split("\n");
+        Header header = new Header(bytesHeader);
+        if (header.equals(Headers.PING) && receivedMessage[0].equals(Headers.TRUE.toString())) {
+            if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH)
                 return;
-            sender.identify(receivedMessage[2], Long.parseLong(receivedMessage[3]));
-            remoteUsers.put(sender);
-            onRemoteUserConnected(sender);
-            if (Settings.visibility == 1) {
-                String pongMessage = Headers.PONG + "\n" + Settings.nickname + "\n" + HASH;
-                sendMessage(sender, pongMessage);
-            }
-        } else if (receivedMessage[0].equals(Headers.PONG)) {
-            if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH && sender.getPort() == getMainPort())
-                return;
-            RemoteUser existingUser = remoteUsers.getByHash(sender.getHash());
+            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[2]));
             if (existingUser != null) {
                 onRemoteUserUpdated(existingUser);
             } else {
                 sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
                 remoteUsers.put(sender);
+                onRemoteUserConnected(sender);
+                if (Settings.visibility == 1) {
+                    String pongMessage = Settings.nickname + "\n" + HASH;
+                    sendMessage(sender, Headers.PONG, pongMessage);
+                }
+            }
+        } else if (header.equals(Headers.PONG)) {
+            if (receivedMessage[0].equals(Settings.nickname) && Long.parseLong(receivedMessage[1]) == HASH)
+                return;
+            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[1]));
+            if (existingUser != null) {
+                onRemoteUserUpdated(existingUser);
+            } else {
+                sender.identify(receivedMessage[0], Long.parseLong(receivedMessage[1]));
+                remoteUsers.put(sender);
                 onRemoteUserFound(sender);
             }
-        } else if (receivedMessage[0].equals(Headers.TEXT)) {
+        } else if (header.equals(Headers.TEXT)) {
             if (Settings.allowChat)
-                onTextMessageReceived(sender, receivedMessage[1]);
-        } else if ((receivedMessage[0].equals(Headers.SEND_REQUEST))) {
+                onTextMessageReceived(sender, receivedMessage[0]);
+        } else if ((header.equals(Headers.SEND_REQUEST))) {
             if (!Settings.allowReceiving){
                 // TODO: 21.06.2020 make special message if user don't allows to receive files
                 /*
@@ -69,9 +77,9 @@ public abstract class Sendere {
                  * if request really was canceled by user or user don't allows to receive files at all
                  * 21.06.2020 huku
                  */
-                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, Integer.parseInt(receivedMessage[2])));
+                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, Integer.parseInt(receivedMessage[1])));
             } else {
-                InRequest request = new InRequest(sender, receivedMessage[1].equals(Headers.TRUE), Integer.parseInt(receivedMessage[2]), receivedMessage[3]);
+                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), Integer.parseInt(receivedMessage[1]), receivedMessage[2]);
                 if (userReady) {
                     userReady = false;
                     currentInRequest = request;
@@ -80,10 +88,10 @@ public abstract class Sendere {
                     inRequests.add(request);
                 }
             }
-        } else if (receivedMessage[0].equals(Headers.SEND_RESPONSE)) {
-            TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[2]));
+        } else if (header.equals(Headers.SEND_RESPONSE)) {
+            TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[1]));
             if (transmission != null) {
-                if (receivedMessage[1].equals(Headers.TRUE)) {
+                if (receivedMessage[0].equals(Headers.TRUE.toString())) {
                     onSendResponse(true, transmission);
                     Thread transmissionThread = new Thread(new Runnable() {
                         @Override
@@ -94,44 +102,46 @@ public abstract class Sendere {
                     transmissionThread.start();
                 } else {
                     onSendResponse(false, transmission);
-                    transmissionsOut.remove(Integer.parseInt(receivedMessage[2]));
+                    transmissionsOut.remove(Integer.parseInt(receivedMessage[1]));
                 }
             }
-        } else if (receivedMessage[0].equals(Headers.MKFILE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.MKFILE)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
-                transmission.createFile(receivedMessage[2]);
+                transmission.createFile(receivedMessage[1]);
             }
-        } else if (receivedMessage[0].equals(Headers.MKDIR)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.MKDIR)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
-                transmission.createDirectory(receivedMessage[2]);
+                transmission.createDirectory(receivedMessage[1]);
             }
-        } else if (receivedMessage[0].equals(Headers.RAW_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.RAW_DATA)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
-                transmission.writeToFile(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length));
+                int offset = receivedMessage[0].getBytes().length + "\n".length();
+                transmission.writeToFile(data, offset, length-offset);
             }
-        } else if (receivedMessage[0].equals(Headers.CLOSE_FILE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.CLOSE_FILE)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
                 transmission.closeFile();
             }
-        } else if (receivedMessage[0].equals(Headers.SEND_COMPLETE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.SEND_COMPLETE)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
                 transmission.onDone();
                 transmissionsIn.remove(transmission.number);
             }
-        } else if (receivedMessage[0].equals(Headers.GZIP_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[1]));
+        } else if (header.equals(Headers.GZIP_DATA)) {
+            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
                 try {
-                    transmission.writeToFile(GzipUtils.unzip(Arrays.copyOfRange(buffer, receivedMessage[0].getBytes().length + receivedMessage[1].getBytes().length + "\n\n".length(), length)));
+                    int offset = receivedMessage[0].getBytes().length + "\n".length();
+                    transmission.writeToFile(GzipUtils.unzip(data, offset, length-offset));
                 } catch (IOException e) {
                     //fail
                     e.printStackTrace();
@@ -211,8 +221,8 @@ public abstract class Sendere {
                             }
 
                             @Override
-                            public void onReceive(byte[] buffer, int length) {
-                                Sendere.this.onReceive(this, buffer, length);
+                            public void onReceive(byte[] header, byte[] data, int length) {
+                                Sendere.this.onReceive(this, header, data, length);
                             }
                         };
                     } catch (IOException e) {
@@ -266,13 +276,15 @@ public abstract class Sendere {
 
                             if (InetAddress.getByAddress(tempByteAddress).isReachable(2000)) {
                                 boolean add = true;
+                                //I don't remember what this loop does
+                                //29.06.2020 huku
                                 for (byte[] bytes : addressesToPing) {
                                     if (Arrays.equals(bytes, tempByteAddress)) {
                                         add = false;
                                         break;
                                     }
                                 }
-                                if (add /*&& !Arrays.equals(networkInterface.byteAddress, tempByteAddress)*/)
+                                if (add && !Arrays.equals(networkInterface.byteAddress, tempByteAddress) || Settings.allowMultiLaunch)
                                     addressesToPing.add(tempByteAddress);
                             }
                         } catch (IOException e) {
@@ -305,7 +317,7 @@ public abstract class Sendere {
         service.shutdown();
         while (!service.isTerminated()) ;
         service = Executors.newFixedThreadPool(256);
-        String message = Headers.PING + "\n" + (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE);
+        String message = (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE.toString());
         for (byte[] address : addressesToPing) {
             for (int i = START_PORT; i <= END_PORT; i++) {
                 int finalI = i;
@@ -322,11 +334,11 @@ public abstract class Sendere {
                                 }
 
                                 @Override
-                                public void onReceive(byte[] buffer, int length) {
-                                    Sendere.this.onReceive(this, buffer, length);
+                                public void onReceive(byte[] header, byte[] data, int length) {
+                                    Sendere.this.onReceive(this, header, data, length);
                                 }
                             };
-                            sendMessage(unidentifiedUser, message);
+                            sendMessage(unidentifiedUser, Headers.PING, message);
                         } catch (IOException e) {
                             //e.printStackTrace();
                         }
@@ -361,12 +373,12 @@ public abstract class Sendere {
             remoteUsers.add(new RemoteUser(nickname, hash, address, port));
     }*/
 
-    public boolean sendMessage(RemoteUser remoteUser, String message) {
-        return sendMessage(remoteUser, message.getBytes(), message.getBytes().length);
+    public boolean sendMessage(RemoteUser remoteUser, Header header, String message) {
+        return sendMessage(remoteUser, header, message.getBytes(), message.getBytes().length);
     }
 
-    public boolean sendMessage(RemoteUser remoteUser, byte[] data, int length) {
-        return remoteUser.sendMessage(data, length);
+    public boolean sendMessage(RemoteUser remoteUser, Header header, byte[] data, int length) {
+        return remoteUser.sendMessage(header, data, length);
     }
 
     public int getMainPort() {
@@ -390,7 +402,7 @@ public abstract class Sendere {
     public void processSendRequest(boolean allow, TransmissionIn transmission) {
         if (allow)
             transmissionsIn.put(transmission.number, transmission);
-        sendMessage(transmission.user, Headers.SEND_RESPONSE + "\n" + (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number);
+        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number);
         if (!inRequests.isEmpty()) {
             currentInRequest = inRequests.removeLast();
             onSendRequest(currentInRequest);
@@ -400,11 +412,11 @@ public abstract class Sendere {
     }
 
     public boolean createRemoteDirectory(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKDIR + "\n" + transmission.number + "\n" + relativePath);
+        return sendMessage(transmission.user, Headers.MKDIR, transmission.number + "\n" + relativePath);
     }
 
     public boolean createRemoteFile(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKFILE + "\n" + transmission.number + "\n" + relativePath);
+        return sendMessage(transmission.user, Headers.MKFILE, transmission.number + "\n" + relativePath);
     }
 
     public void addTransmissionOut(TransmissionOut transmission) {
@@ -412,6 +424,6 @@ public abstract class Sendere {
     }
 
     public void sendTransmissionRequest(TransmissionOut transmission) {
-        sendMessage(transmission.user, Headers.SEND_REQUEST + "\n" + (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename);
+        sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename);
     }
 }

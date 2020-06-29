@@ -56,7 +56,7 @@ public abstract class RemoteUser {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                sendMessage(Headers.IM_ALIVE.getBytes(), Headers.IM_ALIVE.getBytes().length);
+                sendMessage(Headers.IM_ALIVE);
             }
         },0, 2000);
     }
@@ -66,24 +66,26 @@ public abstract class RemoteUser {
             while (!disconnected){
                 int read;
                 byte[] packetLength = new byte[4];
+                byte[] header = new byte[4];
                 int length;
                 try {
-                    while (in.available()<4&&!disconnected){
-                            Thread.sleep(500);
-                    };
+                    while (in.available()<8&&!disconnected){
+                        Thread.sleep(500);
+                    }
                     in.read(packetLength);
                     length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
                     //47 is '/' symbol's code
                     //18.09.2019
                     if(packetLength[3]!=47)
                         continue;
+                    in.read(header);
                     read = 0;
-                    byte[] buffer = new byte[length];
+                    byte[] data = new byte[length];
                     while (read<length&&!disconnected)
-                        read+=in.read(buffer, read, length-read);
+                        read+=in.read(data, read, length-read);
                     lastAliveTime = System.currentTimeMillis();
-                    if(!Arrays.equals(buffer, Headers.IM_ALIVE.getBytes())) {
-                        onReceive(buffer, length);
+                    if(!Arrays.equals(header, Headers.IM_ALIVE.getBytes())) {
+                        onReceive(header, data, length);
                     }
                     if(System.currentTimeMillis() > lastAliveTime+5000)
                         onDisconnectInternal();
@@ -117,7 +119,11 @@ public abstract class RemoteUser {
 
     protected abstract void onDisconnect();
 
-    boolean sendMessage(byte[] data, int length){
+    boolean sendMessage(Header header){
+        return sendMessage(header, null, 0);
+    }
+
+    boolean sendMessage(Header header, byte[] data, int length){
         if (disconnected)
             return false;
         byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
@@ -127,6 +133,7 @@ public abstract class RemoteUser {
             //19.09.2019
             synchronized (out) {
                 out.write(byteLength);
+                out.write(header.getBytes());
                 out.write(data, 0, length);
             }
             return true;
@@ -162,7 +169,7 @@ public abstract class RemoteUser {
         return identified;
     }
 
-    public abstract void onReceive(byte[] buffer, int length);
+    public abstract void onReceive(byte[] header, byte[] data, int length);
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();

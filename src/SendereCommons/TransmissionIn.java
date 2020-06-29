@@ -41,7 +41,7 @@ public abstract class TransmissionIn {
             }
 
             @Override
-            public boolean writeToFile(byte[] data) {
+            public boolean writeToFile(byte[] data, int off, int len) {
                 return false;
             }
 
@@ -79,9 +79,10 @@ public abstract class TransmissionIn {
     /**
      * Calls when Sendere received raw data that should be written to opened file
      * @param data bytes to writing
+     * @param len count of bytes from array that should be written
      * @return {@code true} on success, if returned {@code false} operation should be terminated
      */
-    public abstract boolean writeToFile(byte[] data);
+    public abstract boolean writeToFile(byte[] data, int off, int len);
 
     /**
      * Calls when need to close file that was opened early by {@link #createFile}
@@ -104,5 +105,9 @@ public abstract class TransmissionIn {
 
     public String getCurrentRelativePath() {
         return currentRelativePath;
+    }
+
+    public void writeToFile(byte[] data){
+        writeToFile(data, 0, data.length);
     }
 }
