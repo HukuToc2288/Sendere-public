@@ -70,6 +70,8 @@ public abstract class RemoteUser {
                 int length;
                 try {
                     while (in.available()<8&&!disconnected){
+                        if(System.currentTimeMillis() > lastAliveTime+5000)
+                            onDisconnectInternal();
                         Thread.sleep(500);
                     }
                     in.read(packetLength);
@@ -87,8 +89,7 @@ public abstract class RemoteUser {
                     if(!Arrays.equals(header, Headers.IM_ALIVE.getBytes())) {
                         onReceive(header, data, length);
                     }
-                    if(System.currentTimeMillis() > lastAliveTime+5000)
-                        onDisconnectInternal();
+
                 } catch (SocketException | InterruptedException e) {
                     onDisconnectInternal();
                 } catch (IOException e) {

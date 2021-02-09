@@ -15,7 +15,7 @@ public class Main {
 
     public void main(String[] args) {
         try {
-            Settings.nickname = System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName();
+            Settings.setNickname(System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName());
         } catch (Exception e) {
             //Keep default
         }
@@ -57,9 +57,9 @@ public class Main {
             @Override
             public void onSendResponse(boolean allow, TransmissionOut transmission) {
                 if (allow) {
-                    println("Передача " + transmission.number + " начата");
+                    println("Передача " + transmission.id + " начата");
                 } else {
-                    println("Передача " + transmission.number + " отклонена");
+                    println("Передача " + transmission.id + " отклонена");
                 }
             }
 
@@ -156,13 +156,13 @@ public class Main {
                                 @Override
                                 public void onDone() {
                                     int totalTime = (int) ((System.currentTimeMillis()-startTime)/1000);
-                                    println(String.format("Приём %1$d успешно завершён", number));
+                                    println(String.format("Приём %1$d успешно завершён", id));
                                     println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", ((double)totalBytesReceived)/1024/1024/totalTime, ((double)realData)/1024/1024/totalTime));
                                 }
                             };
 
                             sendere.processSendRequest(true, transmission);
-                            println("Приём начат с идентификатором " + transmission.number);
+                            println("Приём начат с идентификатором " + transmission.id);
                         } else if (line.equals("no")) {
                             question = false;
                             sendere.processSendRequest(false, TransmissionIn.createDummyTransmission(tempInRequest.who, tempInRequest.transmissionId));
@@ -203,7 +203,7 @@ public class Main {
                         }
                         sendere.sendMessage(tempUser, Headers.TEXT, split[2]);
                         println("Сообщение отправлено");
-                        if (!Settings.allowChat)
+                        if (!Settings.isAllowChat())
                             println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ");
                     } else if (line.startsWith("speed ") && line.split(" ").length == 2) {
                         String[] split = line.split(" ", 3);
@@ -243,25 +243,25 @@ public class Main {
                         }
 
                         //Надо переделать расчёт номера передачи
-                        TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), (int) (System.currentTimeMillis()), split[2]) {
+                        TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), split[2]) {
 
                             @Override
                             public void start() {
                                 recursiveSend(filename);
-                                sendere.sendMessage(user, Headers.SEND_COMPLETE, String.valueOf(number));
+                                sendere.sendMessage(user, Headers.SEND_COMPLETE, String.valueOf(id));
                                 onSuccess();
                             }
 
                             @Override
                             public void onFail() {
                                 terminate();
-                                println("Передача с номером " + number + " не удалась");
+                                println("Передача с номером " + id + " не удалась");
                             }
 
                             @Override
                             public void onSuccess() {
                                 terminate();
-                                println("Передача с номером " + number + " успешно завершена");
+                                println("Передача с номером " + id + " успешно завершена");
                             }
 
                             private void recursiveSend(String currentRelativePath) {
@@ -279,13 +279,13 @@ public class Main {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         FileInputStream in = new FileInputStream(file);
-                                        byte[] data = new byte[1024 * 1024 * (Settings.allowGzip ? 4 : 1)];
+                                        byte[] data = new byte[1024 * 1024 * (Settings.isAllowGzip() ? 4 : 1)];
                                         int dataLength;
-                                        byte[] prefix = (number + "\n").getBytes();
-                                        byte[] gzipPrefix = (number + "\n").getBytes();
+                                        byte[] prefix = (id + "\n").getBytes();
+                                        byte[] gzipPrefix = (id + "\n").getBytes();
                                         while ((dataLength = in.read(data)) != -1) {
                                             ByteArrayOutputStream outputStream;
-                                            if (Settings.allowGzip){
+                                            if (Settings.isAllowGzip()){
                                                 byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
                                                 for (int i = 0; i < gdatas.length; i++) {
                                                     outputStream = new ByteArrayOutputStream();
@@ -313,7 +313,7 @@ public class Main {
                                             if (stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(user, Headers.CLOSE_FILE , String.valueOf(number));
+                                        sendere.sendMessage(user, Headers.CLOSE_FILE , String.valueOf(id));
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }

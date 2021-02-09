@@ -5,20 +5,20 @@ public abstract class TransmissionIn {
 
     public final RemoteUser user;
     public final String rootDir;
-    public final int number;
+    public final String id;
     public long realData = 0 ;
     private String currentRelativePath;
 
-    public TransmissionIn(RemoteUser user, int id, String rootDir){
+    public TransmissionIn(RemoteUser user, String id, String rootDir){
         this.user = user;
         this.rootDir = rootDir;
-        number = id;
+        this.id = id;
     }
 
-    public TransmissionIn(RemoteUser user, int id){
+    public TransmissionIn(RemoteUser user, String id){
         this.user = user;
-        this.rootDir = Settings.receivingDir;
-        number = id;
+        this.rootDir = Settings.getReceivingDir();
+        this.id = id;
     }
 
     /**
@@ -29,7 +29,7 @@ public abstract class TransmissionIn {
      * @param id unique id by which transmission can be determined
      * @return transmission with empty methods
      */
-    public static TransmissionIn createDummyTransmission(RemoteUser user, int id){
+    public static TransmissionIn createDummyTransmission(RemoteUser user, String id){
         return new TransmissionIn(user, id) {
             @Override
             public boolean createDirectory(String relativePath) {

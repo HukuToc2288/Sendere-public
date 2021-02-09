@@ -53,8 +53,8 @@ public abstract class Sendere {
     private boolean userReady = true;
 
     private RemoteUserList remoteUsers;
-    private HashMap<Integer, TransmissionIn> transmissionsIn = new HashMap<Integer, TransmissionIn>();
-    private HashMap<Integer, TransmissionOut> transmissionsOut = new HashMap<Integer, TransmissionOut>();
+    private HashMap<String, TransmissionIn> transmissionsIn = new HashMap<String, TransmissionIn>();
+    private HashMap<String, TransmissionOut> transmissionsOut = new HashMap<String, TransmissionOut>();
 
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
@@ -63,7 +63,7 @@ public abstract class Sendere {
         String[] receivedMessage = new String(Arrays.copyOf(data, length)).split("\n");
         Header header = new Header(bytesHeader);
         if (header.equals(Headers.PING) && receivedMessage[0].equals(Headers.TRUE.toString())) {
-            if (receivedMessage[1].equals(Settings.nickname) && Long.parseLong(receivedMessage[2]) == HASH)
+            if (receivedMessage[1].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[2]) == HASH)
                 return;
             RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[2]));
             if (existingUser != null) {
@@ -72,13 +72,13 @@ public abstract class Sendere {
                 sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
                 remoteUsers.put(sender);
                 onRemoteUserConnected(sender);
-                if (Settings.visibility == 1) {
-                    String pongMessage = Settings.nickname + "\n" + HASH;
+                if (Settings.getVisibility() == 1) {
+                    String pongMessage = Settings.getNickname() + "\n" + HASH;
                     sendMessage(sender, Headers.PONG, pongMessage);
                 }
             }
         } else if (header.equals(Headers.PONG)) {
-            if (receivedMessage[0].equals(Settings.nickname) && Long.parseLong(receivedMessage[1]) == HASH)
+            if (receivedMessage[0].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[1]) == HASH)
                 return;
             RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[1]));
             if (existingUser != null) {
@@ -89,19 +89,19 @@ public abstract class Sendere {
                 onRemoteUserFound(sender);
             }
         } else if (header.equals(Headers.TEXT)) {
-            if (Settings.allowChat)
+            if (Settings.isAllowChat())
                 onTextMessageReceived(sender, receivedMessage[0]);
         } else if ((header.equals(Headers.SEND_REQUEST))) {
-            if (!Settings.allowReceiving){
+            if (!Settings.isAllowReceiving()){
                 // TODO: 21.06.2020 make special message if user don't allows to receive files
                 /*
                  * Now requests process as it canceled by user, so sender unable to determine
                  * if request really was canceled by user or user don't allows to receive files at all
                  * 21.06.2020 huku
                  */
-                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, Integer.parseInt(receivedMessage[1])));
+                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, receivedMessage[1]));
             } else {
-                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), Integer.parseInt(receivedMessage[1]), receivedMessage[2]);
+                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), receivedMessage[1], receivedMessage[2]);
                 if (userReady) {
                     userReady = false;
                     currentInRequest = request;
@@ -154,7 +154,7 @@ public abstract class Sendere {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
             if (transmission != null) {
                 transmission.onDone();
-                transmissionsIn.remove(transmission.number);
+                transmissionsIn.remove(transmission.id);
             }
         } else if (header.equals(Headers.GZIP_DATA)) {
             TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
@@ -307,7 +307,7 @@ public abstract class Sendere {
                                         break;
                                     }
                                 }
-                                if (add && !Arrays.equals(networkInterface.byteAddress, tempByteAddress) || Settings.allowMultiLaunch)
+                                if (add && !Arrays.equals(networkInterface.byteAddress, tempByteAddress) || Settings.isAllowMultiLaunch())
                                     addressesToPing.add(tempByteAddress);
                             }
                         } catch (IOException e) {
@@ -340,7 +340,7 @@ public abstract class Sendere {
         service.shutdown();
         while (!service.isTerminated()) ;
         service = Executors.newFixedThreadPool(256);
-        String message = (Settings.visibility == 1 ? (Headers.TRUE + "\n" + Settings.nickname + "\n" + HASH) : Headers.FALSE.toString());
+        String message = (Settings.getVisibility() == 1 ? (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
         for (byte[] address : addressesToPing) {
             for (int i = START_PORT; i <= END_PORT; i++) {
                 int finalI = i;
@@ -383,17 +383,17 @@ public abstract class Sendere {
         return bytes;
     }
 
-/*    public void addOrUpdateRemoteUser(String nickname, long hash, Socket socket) {
+/*    public void addOrUpdateRemoteUser(String getNickname(), long hash, Socket socket) {
         boolean isNewUser = true;
         for (RemoteUser user : remoteUsers) {
-            if (user.hash == hash && user.nickname.equals(nickname)) {
+            if (user.hash == hash && user.getNickname().equals(getNickname())) {
                 user.addAddress(address);
                 isNewUser = false;
                 break;
             }
         }
         if (isNewUser)
-            remoteUsers.add(new RemoteUser(nickname, hash, address, port));
+            remoteUsers.add(new RemoteUser(getNickname(), hash, address, port));
     }*/
 
     public boolean sendMessage(RemoteUser remoteUser, Header header, String message) {
@@ -424,8 +424,8 @@ public abstract class Sendere {
 
     public void processSendRequest(boolean allow, TransmissionIn transmission) {
         if (allow)
-            transmissionsIn.put(transmission.number, transmission);
-        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number);
+            transmissionsIn.put(transmission.id, transmission);
+        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id);
         if (!inRequests.isEmpty()) {
             currentInRequest = inRequests.removeLast();
             onSendRequest(currentInRequest);
@@ -435,18 +435,18 @@ public abstract class Sendere {
     }
 
     public boolean createRemoteDirectory(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKDIR, transmission.number + "\n" + relativePath);
+        return sendMessage(transmission.user, Headers.MKDIR, transmission.id + "\n" + relativePath);
     }
 
     public boolean createRemoteFile(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKFILE, transmission.number + "\n" + relativePath);
+        return sendMessage(transmission.user, Headers.MKFILE, transmission.id + "\n" + relativePath);
     }
 
     public void addTransmissionOut(TransmissionOut transmission) {
-        transmissionsOut.put(transmission.number, transmission);
+        transmissionsOut.put(transmission.id, transmission);
     }
 
     public void sendTransmissionRequest(TransmissionOut transmission) {
-        sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.number + "\n" + transmission.filename);
+        sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id + "\n" + transmission.filename);
     }
 }
