@@ -1,5 +1,7 @@
 package SendereCommons;
 
+import lombok.Data;
+
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -7,6 +9,7 @@ import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.List;
 
+@Data
 public class SimpleNetworkInterface {
 
     public final String stringAddress;
@@ -15,8 +18,10 @@ public class SimpleNetworkInterface {
     public final byte[] macAddress;
     public final String systemName;
     public final String displayName;
+    private final NetworkInterface networkInterface;
 
     public SimpleNetworkInterface(NetworkInterface networkInterface) {
+        this.networkInterface = networkInterface;
         systemName = networkInterface.getName();
         displayName = networkInterface.getDisplayName();
         byte[] tempMacAddress;

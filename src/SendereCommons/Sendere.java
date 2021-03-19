@@ -1,7 +1,12 @@
 package SendereCommons;
 
+import lombok.SneakyThrows;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,7 +43,7 @@ public abstract class Sendere {
     public static final int MAJOR_VERSION = 0;
     public static final int MIDDLE_VERSION = 0;
     public static final int MINOR_VERSION = 1;
-    public static final int VERSION = MAJOR_VERSION<<16+MIDDLE_VERSION<<8+MINOR_VERSION;
+    public static final int VERSION = MAJOR_VERSION << 16 + MIDDLE_VERSION << 8 + MINOR_VERSION;
     /**
      * Size in bytes of oncoming and incoming messages that should be used instead of
      * hardcoded value.
@@ -58,6 +63,8 @@ public abstract class Sendere {
 
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
+
+    private HashSet<ArpEntry> addressesToPing = new HashSet<ArpEntry>();
 
     private void onReceive(RemoteUser sender, byte[] bytesHeader, byte[] data, int length) {
         String[] receivedMessage = new String(Arrays.copyOf(data, length)).split("\n");
@@ -92,7 +99,7 @@ public abstract class Sendere {
             if (Settings.isAllowChat())
                 onTextMessageReceived(sender, receivedMessage[0]);
         } else if ((header.equals(Headers.SEND_REQUEST))) {
-            if (!Settings.isAllowReceiving()){
+            if (!Settings.isAllowReceiving()) {
                 // TODO: 21.06.2020 make special message if user don't allows to receive files
                 /*
                  * Now requests process as it canceled by user, so sender unable to determine
@@ -111,7 +118,7 @@ public abstract class Sendere {
                 }
             }
         } else if (header.equals(Headers.SEND_RESPONSE)) {
-            TransmissionOut transmission = transmissionsOut.get(Integer.parseInt(receivedMessage[1]));
+            TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
             if (transmission != null) {
                 if (receivedMessage[0].equals(Headers.TRUE.toString())) {
                     onSendResponse(true, transmission);
@@ -124,47 +131,47 @@ public abstract class Sendere {
                     transmissionThread.start();
                 } else {
                     onSendResponse(false, transmission);
-                    transmissionsOut.remove(Integer.parseInt(receivedMessage[1]));
+                    transmissionsOut.remove(receivedMessage[1]);
                 }
             }
         } else if (header.equals(Headers.MKFILE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 transmission.createFile(receivedMessage[1]);
             }
         } else if (header.equals(Headers.MKDIR)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 transmission.createDirectory(receivedMessage[1]);
             }
         } else if (header.equals(Headers.RAW_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
                 int offset = receivedMessage[0].getBytes().length + "\n".length();
-                transmission.writeToFile(data, offset, length-offset);
+                transmission.writeToFile(data, offset, length - offset);
             }
         } else if (header.equals(Headers.CLOSE_FILE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 transmission.closeFile();
             }
         } else if (header.equals(Headers.SEND_COMPLETE)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 transmission.onDone();
                 transmissionsIn.remove(transmission.id);
             }
         } else if (header.equals(Headers.GZIP_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(Integer.parseInt(receivedMessage[0]));
+            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
             if (transmission != null) {
                 //This line allows to write packet data into file and send feedback about operation success
                 //28.08.2019
                 try {
                     int offset = receivedMessage[0].getBytes().length + "\n".length();
-                    transmission.realData+=length-offset;
-                    transmission.writeToFile(GzipUtils.unzip(data, offset, length-offset));
+                    transmission.realData += length - offset;
+                    transmission.writeToFile(GzipUtils.unzip(data, offset, length - offset));
                 } catch (IOException e) {
                     //fail
                     e.printStackTrace();
@@ -257,18 +264,49 @@ public abstract class Sendere {
         thread.start();
     }
 
+
+    boolean stopNeighbourRead;
+
     public void updateRemoteUsersList() {
-        ExecutorService service = Executors.newFixedThreadPool(256);
-        ArrayList<byte[]> addressesToPing = new ArrayList<>();
+        // ExecutorService service = Executors.newFixedThreadPool(256);
+        int pingedAddresses = 0;
         remoteUsers = new RemoteUserList();
+        stopNeighbourRead = false;
+        ExecutorService service = Executors.newFixedThreadPool(100);
+        Timer neighbourReadTimer = new Timer();
+        neighbourReadTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                HashSet<ArpEntry> currentNeighbours = readNeighbourTable();
+                int f = 0;
+                for (ArpEntry neighbourAddress : currentNeighbours) {
+                    if (!addressesToPing.contains(neighbourAddress)) {
+                        addressesToPing.add(neighbourAddress);
+                        System.out.println("pinging address " + Arrays.toString(neighbourAddress.getAddress()));
+                        for (int i = START_PORT; i <= END_PORT; i++) {
+                            int finalI = i;
+                            service.submit(new Runnable() {
+                                @Override
+                                public void run() {
+                                    checkSendereOnAddress(neighbourAddress.getAddress(), finalI);
+                                }
+                            });
+                        }
+                    }
+                }
+                if (stopNeighbourRead)
+                    cancel();
+            }
+        }, 0, 15000);
+
         for (SimpleNetworkInterface networkInterface : NetworkList.getNetworkList()) {
             int prefixLength = networkInterface.subnetPreffixLength;
-            if (prefixLength<24)
-                onInternalError(1,prefixLength+"");
+            if (prefixLength < 24)
+                onInternalError(1, prefixLength + "");
             if (prefixLength == 32)
                 continue;
             if (networkInterface.stringAddress.equals("null"))
-                return;
+                continue;
             byte[] mask = new byte[]{0, 0, 0, 0};
             for (int i = 0; i < 4; i++) {
                 if (prefixLength >= 8) {
@@ -282,13 +320,65 @@ public abstract class Sendere {
             int[] startAddress = new int[4];
             byte[] endAddress = new byte[4];
             for (int i = 0; i < 4; i++) {
-                startAddress[i] = (byte) (networkInterface.byteAddress[i] & mask[i]);
+                startAddress[i] = (networkInterface.byteAddress[i] & mask[i]);
                 endAddress[i] = (byte) (networkInterface.byteAddress[i] | ~mask[i]);
             }
-            //System.out.println("start scanning "+networkInterface.stringAddress);
+//            endAddress[2] = -1;
+//            startAddress[2] = 0;
+            System.out.println("start scanning " + networkInterface.stringAddress);
             boolean[] was255 = {false, false, false, false};
             boolean lastPing = false;
-            while (true) {
+
+            DatagramSocket udpSocket = null;
+            try {
+                udpSocket = new DatagramSocket(0);
+            } catch (SocketException e) {
+                continue;
+            }
+            byte[] pdata = new byte[]{};
+//        for (NetworkInterface networkInterface: Collections.list(NetworkInterface.getNetworkInterfaces())) {
+//            udpSocket.send(new DatagramPacket(pdata, pdata.length, Inet6Address.getByAddress("null", new byte[]{}, networkInterface),1337));
+//        }
+            int[] initialAddress = startAddress;
+            for (int i = 0; i < 4; i++) {
+                startAddress = initialAddress.clone();
+                long nextPingTime = System.currentTimeMillis() + 1000;
+                while (true) {
+                    //System.out.println("ping "+ Arrays.toString(startAddress));
+                    try {
+                        udpSocket.send(new DatagramPacket(pdata, pdata.length, InetAddress.getByAddress(new byte[]{
+                                (byte) startAddress[0], (byte) startAddress[1], (byte) startAddress[2], (byte) startAddress[3]}),
+                                9));
+                    } catch (Exception ignored) {
+
+                    }
+                    startAddress[3]++;
+                    if (startAddress[3] == 256) {
+                        startAddress[2]++;
+                        startAddress[3] = 0;
+                        if (startAddress[2] == 256) {
+                            startAddress[1]++;
+                            startAddress[2] = 0;
+                            if (startAddress[1] == 256) {
+                                startAddress[0]++;
+                                startAddress[1] = 0;
+                                if (startAddress[0] == 256) {
+                                    //WTF???
+                                    //21.08.2019
+                                }
+                            }
+                        }
+                    }
+                    if (Arrays.equals(intToByteArray(startAddress), endAddress))
+                        break;
+                }
+                while (nextPingTime > System.currentTimeMillis()) ;
+            }
+
+            //old pinging method
+            //22.02.2020 huku
+
+            /* while (true) {
                 int[] tempAddress = startAddress.clone();
                 service.submit(new Runnable() {
                     @Override
@@ -315,6 +405,7 @@ public abstract class Sendere {
                         }
                     }
                 });
+
                 startAddress[3]++;
                 if (startAddress[3] == 256) {
                     startAddress[2]++;
@@ -335,42 +426,102 @@ public abstract class Sendere {
                 if (Arrays.equals(intToByteArray(tempAddress), endAddress))
                     break;
 
-            }
+            }*/
         }
-        service.shutdown();
-        while (!service.isTerminated()) ;
-        service = Executors.newFixedThreadPool(256);
-        String message = (Settings.getVisibility() == 1 ? (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
-        for (byte[] address : addressesToPing) {
+//        service.shutdown();
+//        while (!service.isTerminated()) ;
+
+
+        System.out.println("ping done");
+        // wait for incomplete arp entries to be completed
+        // 2 seconds must be enough
+        // 24.02.2021 huku
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+
+        }
+        //readNeighbourTable(addressesToPing);
+        //service.shutdown();
+        stopNeighbourRead = true;
+        if (Settings.isAllowMultiLaunch()) {
             for (int i = START_PORT; i <= END_PORT; i++) {
                 int finalI = i;
                 service.submit(new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            Socket remoteSocket = new Socket(InetAddress.getByAddress(address), finalI);
-                            RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
-                                @Override
-                                protected void onDisconnect() {
-                                    onUserDisconnected(this);
-                                    remoteUsers.removeByHash(this.getHash());
-                                }
-
-                                @Override
-                                public void onReceive(byte[] header, byte[] data, int length) {
-                                    Sendere.this.onReceive(this, header, data, length);
-                                }
-                            };
-                            sendMessage(unidentifiedUser, Headers.PING, message);
-                        } catch (IOException e) {
-                            //e.printStackTrace();
-                        }
+                        System.out.println("localhost check starts");
+                        checkSendereOnAddress(new byte[]{127, 0, 0, 1}, finalI);
                     }
                 });
             }
         }
-        service.shutdown();
-        while (!service.isTerminated()) ;
+//        System.out.println("Shutdowning service");
+//        while (!service.isTerminated()) ;
+    }
+
+    String checkSendereOnAddressMessage;
+
+    private void checkSendereOnAddress(byte[] address, int port) {
+        if (checkSendereOnAddressMessage == null) {
+            checkSendereOnAddressMessage = (Settings.getVisibility() == 1 ?
+                    (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
+        }
+        try {
+            Socket remoteSocket = new Socket(InetAddress.getByAddress(address), port);
+            RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
+                @Override
+                protected void onDisconnect() {
+                    onUserDisconnected(this);
+                    remoteUsers.removeByHash(this.getHash());
+                }
+
+                @Override
+                public void onReceive(byte[] header, byte[] data, int length) {
+                    Sendere.this.onReceive(this, header, data, length);
+                }
+            };
+            sendMessage(unidentifiedUser, Headers.PING, checkSendereOnAddressMessage);
+        } catch (IOException e) {
+//            if (address[0] == 127)
+//                e.printStackTrace();
+        }
+    }
+
+    private HashSet<ArpEntry> readNeighbourTable() {
+        HashSet<ArpEntry> addressList = new HashSet<ArpEntry>();
+        Process p = null;
+        try {
+            System.out.println("Running ip neigh");
+            p = Runtime.getRuntime().exec("ip neigh");
+            //p.waitFor();
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String line = "";
+            while ((line = reader.readLine()) != null) {
+                // TODO: make invalid neighbour records detection more reliable and andd ipv6 support
+                // 24.02.2021 huku
+                if (!line.contains(":")) {
+                    continue;
+                }
+                String ipString = line.substring(0, line.indexOf(' '));
+                if (ipString.contains(".")) {
+                    // ipv4 address
+                    byte[] ipBytes = new byte[4];
+                    String[] ipBytesString = ipString.split("\\.");
+                    if (ipBytesString.length != 4)
+                        continue;
+                    for (int i = 0; i < 4; i++) {
+                        ipBytes[i] = (byte) Integer.parseInt(ipBytesString[i]);
+                    }
+                    addressList.add(new ArpEntry(ipBytes, START_PORT));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return addressList;
     }
 
     protected abstract void onInternalError(int code, String message);

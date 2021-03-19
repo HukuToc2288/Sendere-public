@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -174,5 +175,18 @@ public abstract class RemoteUser {
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RemoteUser that = (RemoteUser) o;
+        return hash == that.hash && port == that.port && identified == that.identified && Objects.equals(nickname, that.nickname) && Objects.equals(socket, that.socket);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nickname, hash);
     }
 }
