@@ -1,0 +1,4 @@
+package SendereCommons
+
+class OSUtils {
+}
