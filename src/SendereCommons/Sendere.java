@@ -264,10 +264,11 @@ public abstract class Sendere {
         });
         thread.start();
 
-        DatagramSocket discoverySocket;
+        MulticastSocket discoverySocket;
         try {
-            discoverySocket = new DatagramSocket(DISCOVERY_PORT);
-        } catch (SocketException e) {
+            discoverySocket = new MulticastSocket(DISCOVERY_PORT);
+            discoverySocket.joinGroup(InetAddress.getByName("224.0.0.1"));
+        } catch (IOException e) {
             onInternalError(2,DISCOVERY_PORT+"");
             e.printStackTrace();
             return;
@@ -283,7 +284,7 @@ public abstract class Sendere {
                         e.printStackTrace();
                         continue;
                     }
-                    String[] receivedData = new String(discoveryPacket.getData()).split("\n");
+                    String[] receivedData = new String(discoveryPacket.getData(),0,discoveryPacket.getLength()).split("\n");
                     if (receivedData.length != 3)
                         continue;
                     Header header = new Header(receivedData[0]);
