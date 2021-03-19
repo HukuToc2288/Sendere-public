@@ -18,6 +18,7 @@ public abstract class Sendere {
     //21.08.2019
     public static final int START_PORT = 1337;
     public static final int END_PORT = 1356;
+    public static final int DISCOVERY_PORT = 1338;
 
     /*
      Those constants defines the version of Sendere library
@@ -262,6 +263,59 @@ public abstract class Sendere {
             }
         });
         thread.start();
+
+        DatagramSocket discoverySocket;
+        try {
+            discoverySocket = new DatagramSocket(DISCOVERY_PORT);
+        } catch (SocketException e) {
+            onInternalError(2,DISCOVERY_PORT+"");
+            e.printStackTrace();
+            return;
+        }
+        DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024],1024);
+        Thread udpDiscoveryThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (allowReceiving) {
+                    try {
+                        discoverySocket.receive(discoveryPacket);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
+                    String[] receivedData = new String(discoveryPacket.getData()).split("\n");
+                    if (receivedData.length != 3)
+                        continue;
+                    Header header = new Header(receivedData[0]);
+                    if (!header.equals(Headers.DEVICE_DISCOVERY))
+                        continue;
+                    if (checkSendereOnAddressMessage == null) {
+                        checkSendereOnAddressMessage = (Settings.getVisibility() == 1 ?
+                                (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
+                    }
+                    try {
+                        Socket remoteSocket = new Socket(InetAddress.getByName(receivedData[1]), Integer.parseInt(receivedData[2]));
+                        RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
+                            @Override
+                            protected void onDisconnect() {
+                                onUserDisconnected(this);
+                                remoteUsers.removeByHash(this.getHash());
+                            }
+
+                            @Override
+                            public void onReceive(byte[] header, byte[] data, int length) {
+                                Sendere.this.onReceive(this, header, data, length);
+                            }
+                        };
+                        sendMessage(unidentifiedUser, Headers.PING, checkSendereOnAddressMessage);
+                    } catch (IOException e) {
+//            if (address[0] == 127)
+//                e.printStackTrace();
+                    }
+                }
+            }
+        });
+        udpDiscoveryThread.start();
     }
 
 
@@ -331,49 +385,54 @@ public abstract class Sendere {
 
             DatagramSocket udpSocket = null;
             try {
-                udpSocket = new DatagramSocket(0);
-            } catch (SocketException e) {
+                udpSocket = new DatagramSocket(0,InetAddress.getByAddress(networkInterface.byteAddress));
+                byte[] discoveryPacketData = (Headers.DEVICE_DISCOVERY+"\n"+networkInterface.getStringAddress()+"\n"+mainPort).getBytes();
+                DatagramPacket discoveryPacket = new DatagramPacket(discoveryPacketData,0,discoveryPacketData.length,InetAddress.getByName("224.0.0.1"),1338);
+                udpSocket.send(discoveryPacket);
+            } catch (IOException e) {
                 continue;
             }
-            byte[] pdata = new byte[]{};
+
+//            byte[] pdata = new byte[]{};
 //        for (NetworkInterface networkInterface: Collections.list(NetworkInterface.getNetworkInterfaces())) {
 //            udpSocket.send(new DatagramPacket(pdata, pdata.length, Inet6Address.getByAddress("null", new byte[]{}, networkInterface),1337));
 //        }
-            int[] initialAddress = startAddress;
-            for (int i = 0; i < 4; i++) {
-                startAddress = initialAddress.clone();
-                long nextPingTime = System.currentTimeMillis() + 1000;
-                while (true) {
-                    //System.out.println("ping "+ Arrays.toString(startAddress));
-                    try {
-                        udpSocket.send(new DatagramPacket(pdata, pdata.length, InetAddress.getByAddress(new byte[]{
-                                (byte) startAddress[0], (byte) startAddress[1], (byte) startAddress[2], (byte) startAddress[3]}),
-                                9));
-                    } catch (Exception ignored) {
 
-                    }
-                    startAddress[3]++;
-                    if (startAddress[3] == 256) {
-                        startAddress[2]++;
-                        startAddress[3] = 0;
-                        if (startAddress[2] == 256) {
-                            startAddress[1]++;
-                            startAddress[2] = 0;
-                            if (startAddress[1] == 256) {
-                                startAddress[0]++;
-                                startAddress[1] = 0;
-                                if (startAddress[0] == 256) {
-                                    //WTF???
-                                    //21.08.2019
-                                }
-                            }
-                        }
-                    }
-                    if (Arrays.equals(intToByteArray(startAddress), endAddress))
-                        break;
-                }
-                while (nextPingTime > System.currentTimeMillis()) ;
-            }
+//            int[] initialAddress = startAddress;
+//            for (int i = 0; i < 4; i++) {
+//                startAddress = initialAddress.clone();
+//                long nextPingTime = System.currentTimeMillis() + 1000;
+//                while (true) {
+//                    //System.out.println("ping "+ Arrays.toString(startAddress));
+//                    try {
+//                        udpSocket.send(new DatagramPacket(pdata, pdata.length, InetAddress.getByAddress(new byte[]{
+//                                (byte) startAddress[0], (byte) startAddress[1], (byte) startAddress[2], (byte) startAddress[3]}),
+//                                9));
+//                    } catch (Exception ignored) {
+//
+//                    }
+//                    startAddress[3]++;
+//                    if (startAddress[3] == 256) {
+//                        startAddress[2]++;
+//                        startAddress[3] = 0;
+//                        if (startAddress[2] == 256) {
+//                            startAddress[1]++;
+//                            startAddress[2] = 0;
+//                            if (startAddress[1] == 256) {
+//                                startAddress[0]++;
+//                                startAddress[1] = 0;
+//                                if (startAddress[0] == 256) {
+//                                    //WTF???
+//                                    //21.08.2019
+//                                }
+//                            }
+//                        }
+//                    }
+//                    if (Arrays.equals(intToByteArray(startAddress), endAddress))
+//                        break;
+//                }
+//                while (nextPingTime > System.currentTimeMillis()) ;
+//            }
 
             //old pinging method
             //22.02.2020 huku

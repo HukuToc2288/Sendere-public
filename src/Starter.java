@@ -10,15 +10,15 @@ import java.util.Enumeration;
 import java.util.logging.Logger;
 
 public class Starter {
-    public static void main2(String[] args) {
-        //new Main().main(args);
+    public static void main(String[] args) {
+        new Main().main(args);
         //new LegacyGUI().init();
         //main2(args);
     }
 
     static int i = 0;
 
-    public static void main(String[] args) throws IOException {
+    public static void main2(String[] args) throws IOException {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             //UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");

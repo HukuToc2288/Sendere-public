@@ -20,5 +20,7 @@ public class Headers {
     public static final Header SEND_COMPLETE = new Header("SDCT");
     public static final Header SPEED_MEASURE = new Header("SPDM");
 
+    public static final Header DEVICE_DISCOVERY = new Header("SENDERE: кто в сети¿?");
+
     // End for headers supported in all Sendere versions
 }

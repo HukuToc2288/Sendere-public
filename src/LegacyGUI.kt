@@ -1,6 +1,4 @@
 import SendereCommons.*
-import jdk.nashorn.internal.codegen.ObjectClassGenerator
-import jdk.nashorn.internal.codegen.ObjectClassGenerator.pack
 
 import Starter.i
 import java.awt.*
