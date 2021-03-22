@@ -24,7 +24,7 @@ public class NetworkList {
         ArrayList<SimpleNetworkInterface> networkInterfaceArray = new ArrayList<SimpleNetworkInterface>();
         for (int i = 0; i<nets.size(); i++){
             ArrayList<InetAddress> inetAddresses = Collections.list(nets.get(i).getInetAddresses());
-            if(inetAddresses.size()==0 || !hasIp4address(inetAddresses))
+            if(inetAddresses.size()==0/* || !hasIp4address(inetAddresses)*/)
                 continue;
             networkInterfaceArray.add(new SimpleNetworkInterface(nets.get(i)));
         }
