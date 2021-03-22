@@ -201,6 +201,7 @@ public abstract class Sendere {
                 discoveryPort = i;
                 discoverySocket = new MulticastSocket(discoveryPort);
                 discoverySocket.joinGroup(InetAddress.getByName("224.0.0.1"));
+                //discoverySocket.connect("");
                 break;
             } catch (IOException e) {
                 //e.printStackTrace();
@@ -212,6 +213,7 @@ public abstract class Sendere {
         }
 
         HASH = System.currentTimeMillis();
+        System.out.println("Порт обнаружения " + discoveryPort);
         startReceiving();
     }
 
