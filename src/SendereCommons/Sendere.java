@@ -294,7 +294,7 @@ public abstract class Sendere {
                         e.printStackTrace();
                         continue;
                     }
-                    String[] receivedData = new String(discoveryPacket.getData(), 0, discoveryPacket.getLength()).split("\n");
+                    String[] receivedData = new String(discoveryPacket.getData(), 0, discoveryPacket.getLength(),StandardCharsets.UTF_8).split("\n");
                     if (receivedData.length != 3)
                         continue;
                     Header header = new Header(receivedData[0]);
@@ -356,7 +356,7 @@ public abstract class Sendere {
                         localAddressString = ((Inet6Address) address).getHostAddress();
                     else
                         continue;
-                    byte[] discoveryPacketData = (Headers.DEVICE_DISCOVERY + "\n" + localAddressString + "\n" + mainPort).getBytes();
+                    byte[] discoveryPacketData = (Headers.DEVICE_DISCOVERY + "\n" + localAddressString + "\n" + mainPort).getBytes(StandardCharsets.UTF_8);
                     for (int i = START_PORT; i <= END_PORT; i++) {
                         DatagramPacket discoveryPacket = new DatagramPacket(discoveryPacketData, 0, discoveryPacketData.length, InetAddress.getByName("224.0.0.1"), i);
                         udpSocket.send(discoveryPacket);
