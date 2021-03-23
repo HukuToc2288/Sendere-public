@@ -23,7 +23,7 @@ public class Main {
         NetworkList.updateList();
         if (NetworkList.getNetworkList().length == 0) {
             println("Ваше устройство не педключено ни к одной сети");
-            System.exit(0);
+           // System.exit(0);
         }
         println("Инициализация сервиса...");
         sendere = new Sendere() {
