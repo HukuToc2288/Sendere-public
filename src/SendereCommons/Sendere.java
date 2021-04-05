@@ -284,17 +284,16 @@ public abstract class Sendere {
         });
         thread.start();
 
-        DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024], 1024);
+        final DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024], 1024);
         final MulticastSocket discoverySocket;
         try {
             discoverySocket = new MulticastSocket(DISCOVERY_PORT);
-            discoverySocket.joinGroup(InetAddress.getByName("239.69.4.20"));
+            discoverySocket.joinGroup(InetAddress.getByName("224.0.0.1"));
         } catch (IOException e) {
             onInternalError(2,DISCOVERY_PORT+"");
             e.printStackTrace();
             return;
         }
-        final DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024],1024);
         Thread udpDiscoveryThread = new Thread(new Runnable() {
             @Override
             public void run() {
