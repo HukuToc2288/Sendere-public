@@ -20,7 +20,7 @@ public abstract class TransmissionOut {
         this.rooDirectory = file.getParent();
         filename = file.getName();
         this.isDirectory = isDirectory;
-        this.id = Settings.getNickname()+">"+user.getNickname()+">"+String.format("%08x", ThreadLocalRandom.current().nextInt(0,0xffffffff));
+        this.id = Settings.getNickname()+">"+user.getNickname()+">"+String.format("%08x", ThreadLocalRandom.current().nextInt(0,Integer.MAX_VALUE));
     }
 
     public abstract void start();

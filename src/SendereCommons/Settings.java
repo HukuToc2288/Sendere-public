@@ -64,5 +64,5 @@ public class Settings {
     // 29.06.2020 huku
     @Getter
     @Setter
-    private static boolean allowGzip = true;
+    private static boolean allowGzip = false;
 }
