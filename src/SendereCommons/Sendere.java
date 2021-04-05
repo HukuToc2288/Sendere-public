@@ -119,7 +119,7 @@ public abstract class Sendere {
                 }
             }
         } else if (header.equals(Headers.SEND_RESPONSE)) {
-            TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
+            final TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
             if (transmission != null) {
                 if (receivedMessage[0].equals(Headers.TRUE.toString())) {
                     onSendResponse(true, transmission);
@@ -264,7 +264,7 @@ public abstract class Sendere {
         });
         thread.start();
 
-        MulticastSocket discoverySocket;
+        final MulticastSocket discoverySocket;
         try {
             discoverySocket = new MulticastSocket(DISCOVERY_PORT);
             discoverySocket.joinGroup(InetAddress.getByName("239.69.4.20"));
@@ -273,7 +273,7 @@ public abstract class Sendere {
             e.printStackTrace();
             return;
         }
-        DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024],1024);
+        final DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024],1024);
         Thread udpDiscoveryThread = new Thread(new Runnable() {
             @Override
             public void run() {
