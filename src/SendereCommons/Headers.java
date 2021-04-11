@@ -4,23 +4,21 @@ public class Headers {
 
     // Start for headers supported in all Sendere versions
 
-    public static final Header PING = new Header("PING");
-    public static final Header PONG = new Header("PONG");
-    public static final Header TEXT = new Header("TEXT");
-    public static final Header TRUE = new Header("TRUE");
-    public static final Header FALSE = new Header("FALS");
-    public static final Header MKDIR = new Header("MKDR");
-    public static final Header MKFILE = new Header("MKFL");
-    public static final Header IM_ALIVE = new Header("IALV");
-    public static final Header RAW_DATA = new Header("RAWD");
-    public static final Header GZIP_DATA = new Header("RAWZ");
-    public static final Header CLOSE_FILE = new Header("CLSF");
-    public static final Header SEND_REQUEST = new Header("SDRT");
-    public static final Header SEND_RESPONSE = new Header("SDRE");
-    public static final Header SEND_COMPLETE = new Header("SDCT");
-    public static final Header SPEED_MEASURE = new Header("SPDM");
+    public static final byte PING = 17;
+    public static final byte PONG = 18;
+    public static final byte TEXT = 19;
+    public static final byte MKDIR = 20;
+    public static final byte MKFILE = 21;
+    public static final byte IM_ALIVE = 22;
+    public static final byte RAW_DATA = 23;
+    public static final byte GZIP_DATA = 24;
+    public static final byte CLOSE_FILE = 25;
+    public static final byte SEND_REQUEST = 26;
+    public static final byte SEND_RESPONSE = 27;
+    public static final byte SEND_COMPLETE = 28;
+    public static final byte SPEED_MEASURE = 29;
 
-    public static final Header DEVICE_DISCOVERY = new Header("SENDERE: k7o 8 ce7u?");
+   // public static final Header DEVICE_DISCOVERY = new Header("SENDERE: k7o 8 ce7u?");
 
     // End for headers supported in all Sendere versions
 }

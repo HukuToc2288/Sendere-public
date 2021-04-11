@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class RemoteUser {
 
@@ -33,13 +35,13 @@ public abstract class RemoteUser {
         identifyTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if(!identified)
+                if (!identified)
                     onDisconnectInternal();
             }
-        },5000);
+        }, 5000);
     }
 
-    public int getPort(){
+    public int getPort() {
         return socket.getPort();
     }
 
@@ -57,9 +59,9 @@ public abstract class RemoteUser {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                sendMessage(Headers.IM_ALIVE);
+                sendAlive();
             }
-        },0, 2000);
+        }, 0, 2000);
     }
 
     private void doReceiving() {
@@ -68,11 +70,11 @@ public abstract class RemoteUser {
             public void run() {
                 while (!disconnected) {
                     int read;
-                    byte[] packetLength = new byte[4];
-                    byte[] header = new byte[4];
+                    byte[] packetLength = new byte[3];
+                    byte flags;
                     int length;
                     try {
-                        while (in.available() < 8 && !disconnected) {
+                        while (in.available() < 4 && !disconnected) {
                             if (System.currentTimeMillis() > lastAliveTime + 5000)
                                 RemoteUser.this.onDisconnectInternal();
                             Thread.sleep(500);
@@ -83,15 +85,13 @@ public abstract class RemoteUser {
                         //18.09.2019
 //                    if(packetLength[3]!=47)
 //                        continue;
-                        in.read(header);
+                        flags = (byte) in.read();
                         read = 0;
                         byte[] data = new byte[length];
                         while (read < length && !disconnected)
                             read += in.read(data, read, length - read);
                         lastAliveTime = System.currentTimeMillis();
-                        if (!Arrays.equals(header, Headers.IM_ALIVE.getBytes())) {
-                            RemoteUser.this.onReceive(header, data, length);
-                        }
+                        RemoteUser.this.onReceive(flags, data);
 
                     } catch (SocketException | InterruptedException e) {
                         RemoteUser.this.onDisconnectInternal();
@@ -113,33 +113,74 @@ public abstract class RemoteUser {
     }
 
 
-
-    private void onDisconnectInternal(){
-        if(disconnected)
+    private void onDisconnectInternal() {
+        if (disconnected)
             return;
         disconnected = true;
-        if(isIdentified())
+        if (isIdentified())
             onDisconnect();
     }
 
     protected abstract void onDisconnect();
 
-    boolean sendMessage(Header header){
-        return sendMessage(header, null, 0);
+    boolean sendAlive() {
+        // Send headless packet to keep connection
+        // 11.04.2021 huku
+        synchronized (out) {
+            if (disconnected)
+                return false;
+            try {
+                synchronized (out) {
+                    // TODO: 11.04.2021 send flags: stub
+                    out.write(0);
+                    out.write(0);
+                    out.write(0);
+                    out.write(0);
+                }
+                return true;
+            } catch (SocketException e) {
+                //e.printStackTrace();
+                onDisconnectInternal();
+            } catch (IOException e) {
+                //e.printStackTrace();
+            }
+            return false;
+        }
     }
 
-    boolean sendMessage(Header header, byte[] data, int length){
+    /**
+     * @deprecated
+     * go use partial send
+     *
+     * @param header
+     * @param data
+     * @param length
+     * @return
+     */
+    @Deprecated
+    boolean sendMessage(byte header, byte[] data, int length) {
+        return sendMessage((byte) 0, new byte[]{header}, data);
+    }
+
+
+    public boolean sendMessage(byte flags, byte[]... data) {
         if (disconnected)
             return false;
-        byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
+        int length = 0;
+        for (byte[] dataPiece: data){
+            length+=dataPiece.length;
+        }
+        byte[] byteLength = new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)};
         try {
             //Don't pay attention on "Synchronization on a non-final field" warning
             //output stream never changing even if javac can't understand it
             //19.09.2019
             synchronized (out) {
                 out.write(byteLength);
-                out.write(header.getBytes());
-                out.write(data, 0, length);
+                out.write(flags);
+                for (byte[] dataPiece: data){
+                    out.write(dataPiece);
+                }
             }
             return true;
         } catch (SocketException e) {
@@ -164,17 +205,17 @@ public abstract class RemoteUser {
         return hash;
     }
 
-    void identify(String nickname, long hash){
+    void identify(String nickname, long hash) {
         this.nickname = nickname;
         this.hash = hash;
         identified = true;
     }
 
-    private boolean isIdentified(){
+    private boolean isIdentified() {
         return identified;
     }
 
-    public abstract void onReceive(byte[] header, byte[] data, int length);
+    public abstract void onReceive(byte flags, byte[] data);
 
     public String getAddress() {
         return socket.getInetAddress().getHostAddress();

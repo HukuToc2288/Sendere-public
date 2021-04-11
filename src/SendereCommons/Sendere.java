@@ -1,15 +1,18 @@
 package SendereCommons;
 
+import lombok.Setter;
 import lombok.SneakyThrows;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class Sendere {
 
@@ -69,118 +72,145 @@ public abstract class Sendere {
 
     private HashSet<ArpEntry> addressesToPing = new HashSet<ArpEntry>();
 
-    private void onReceive(RemoteUser sender, byte[] bytesHeader, byte[] data, int length) {
-        String[] receivedMessage = new String(Arrays.copyOf(data, length)).split("\n");
-        Header header = new Header(bytesHeader);
-        if (header.equals(Headers.PING) && receivedMessage[0].equals(Headers.TRUE.toString())) {
-            if (receivedMessage[1].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[2]) == HASH)
+    private void onReceive(RemoteUser sender, byte flags, byte[] data) {
+        // TODO: 11.04.2021 stub
+        if (flags != 0)
+            return;
+        byte header = data[0];
+        if (header == Headers.PING) {
+            long remoteSUID = Converters.bytesToLong(data, 1);
+            int remoteNickLength = data[9];
+            String remoteNick = new String(data, 10, remoteNickLength, StandardCharsets.UTF_8);
+            // self-ping
+            // 11.04.2021 huku
+            if (remoteSUID == HASH && remoteNick.equals(Settings.getNickname()))
                 return;
-            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[2]));
+            RemoteUser existingUser = remoteUsers.getByHash(remoteSUID);
             if (existingUser != null) {
                 onRemoteUserUpdated(existingUser);
             } else {
-                sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
+                sender.identify(remoteNick, remoteSUID);
                 remoteUsers.put(sender);
                 onRemoteUserConnected(sender);
                 if (Settings.getVisibility() == 1) {
                     String pongMessage = Settings.getNickname() + "\n" + HASH;
-                    sendMessage(sender, Headers.PONG, pongMessage);
-                }
-            }
-        } else if (header.equals(Headers.PONG)) {
-            if (receivedMessage[0].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[1]) == HASH)
-                return;
-            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[1]));
-            if (existingUser != null) {
-                onRemoteUserUpdated(existingUser);
-            } else {
-                sender.identify(receivedMessage[0], Long.parseLong(receivedMessage[1]));
-                remoteUsers.put(sender);
-                onRemoteUserFound(sender);
-            }
-        } else if (header.equals(Headers.TEXT)) {
-            if (Settings.isAllowChat())
-                onTextMessageReceived(sender, receivedMessage[0]);
-        } else if ((header.equals(Headers.SEND_REQUEST))) {
-            if (!Settings.isAllowReceiving()) {
-                // TODO: 21.06.2020 make special message if user don't allows to receive files
-                /*
-                 * Now requests process as it canceled by user, so sender unable to determine
-                 * if request really was canceled by user or user don't allows to receive files at all
-                 * 21.06.2020 huku
-                 */
-                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, receivedMessage[1]));
-            } else {
-                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), receivedMessage[1], receivedMessage[2]);
-                if (userReady) {
-                    userReady = false;
-                    currentInRequest = request;
-                    onSendRequest(request);
-                } else {
-                    inRequests.add(request);
-                }
-            }
-        } else if (header.equals(Headers.SEND_RESPONSE)) {
-            final TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
-            if (transmission != null) {
-                if (receivedMessage[0].equals(Headers.TRUE.toString())) {
-                    onSendResponse(true, transmission);
-                    Thread transmissionThread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            transmission.start();
-                        }
-                    });
-                    transmissionThread.start();
-                } else {
-                    onSendResponse(false, transmission);
-                    transmissionsOut.remove(receivedMessage[1]);
-                }
-            }
-        } else if (header.equals(Headers.MKFILE)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                transmission.createFile(receivedMessage[1]);
-            }
-        } else if (header.equals(Headers.MKDIR)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                transmission.createDirectory(receivedMessage[1]);
-            }
-        } else if (header.equals(Headers.RAW_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                //This line allows to write packet data into file and send feedback about operation success
-                //28.08.2019
-                int offset = receivedMessage[0].getBytes().length + "\n".length();
-                transmission.writeToFile(data, offset, length - offset);
-            }
-        } else if (header.equals(Headers.CLOSE_FILE)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                transmission.closeFile();
-            }
-        } else if (header.equals(Headers.SEND_COMPLETE)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                transmission.onDone();
-                transmissionsIn.remove(transmission.id);
-            }
-        } else if (header.equals(Headers.GZIP_DATA)) {
-            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-            if (transmission != null) {
-                //This line allows to write packet data into file and send feedback about operation success
-                //28.08.2019
-                try {
-                    int offset = receivedMessage[0].getBytes().length + "\n".length();
-                    transmission.realData += length - offset;
-                    transmission.writeToFile(GzipUtils.unzip(data, offset, length - offset));
-                } catch (IOException e) {
-                    //fail
-                    e.printStackTrace();
+                    byte[] byteSUID = Converters.longToBytes(HASH);
+                    byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
+                    byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
+                    sendMessage(sender, (byte) 0, new byte[]{Headers.PONG}, byteSUID, nicknameLength, byteNickname);
                 }
             }
         }
+//
+//        if (header.equals(Headers.PING) && receivedMessage[0].equals(Headers.TRUE.toString())) {
+//            if (receivedMessage[1].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[2]) == HASH)
+//                return;
+//            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[2]));
+//            if (existingUser != null) {
+//                onRemoteUserUpdated(existingUser);
+//            } else {
+//                sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
+//                remoteUsers.put(sender);
+//                onRemoteUserConnected(sender);
+//                if (Settings.getVisibility() == 1) {
+//                    String pongMessage = Settings.getNickname() + "\n" + HASH;
+//                    sendMessage(sender, Headers.PONG, pongMessage);
+//                }
+//            }
+//        } else if (header.equals(Headers.PONG)) {
+//            if (receivedMessage[0].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[1]) == HASH)
+//                return;
+//            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[1]));
+//            if (existingUser != null) {
+//                onRemoteUserUpdated(existingUser);
+//            } else {
+//                sender.identify(receivedMessage[0], Long.parseLong(receivedMessage[1]));
+//                remoteUsers.put(sender);
+//                onRemoteUserFound(sender);
+//            }
+//        } else if (header.equals(Headers.TEXT)) {
+//            if (Settings.isAllowChat())
+//                onTextMessageReceived(sender, receivedMessage[0]);
+//        } else if ((header.equals(Headers.SEND_REQUEST))) {
+//            if (!Settings.isAllowReceiving()) {
+//                // TODO: 21.06.2020 make special message if user don't allows to receive files
+//                /*
+//                 * Now requests process as it canceled by user, so sender unable to determine
+//                 * if request really was canceled by user or user don't allows to receive files at all
+//                 * 21.06.2020 huku
+//                 */
+//                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, receivedMessage[1]));
+//            } else {
+//                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), receivedMessage[1], receivedMessage[2]);
+//                if (userReady) {
+//                    userReady = false;
+//                    currentInRequest = request;
+//                    onSendRequest(request);
+//                } else {
+//                    inRequests.add(request);
+//                }
+//            }
+//        } else if (header.equals(Headers.SEND_RESPONSE)) {
+//            final TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
+//            if (transmission != null) {
+//                if (receivedMessage[0].equals(Headers.TRUE.toString())) {
+//                    onSendResponse(true, transmission);
+//                    Thread transmissionThread = new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            transmission.start();
+//                        }
+//                    });
+//                    transmissionThread.start();
+//                } else {
+//                    onSendResponse(false, transmission);
+//                    transmissionsOut.remove(receivedMessage[1]);
+//                }
+//            }
+//        } else if (header.equals(Headers.MKFILE)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                transmission.createFile(receivedMessage[1]);
+//            }
+//        } else if (header.equals(Headers.MKDIR)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                transmission.createDirectory(receivedMessage[1]);
+//            }
+//        } else if (header.equals(Headers.RAW_DATA)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                //This line allows to write packet data into file and send feedback about operation success
+//                //28.08.2019
+//                int offset = receivedMessage[0].getBytes().length + "\n".length();
+//                transmission.writeToFile(data, offset, length - offset);
+//            }
+//        } else if (header.equals(Headers.CLOSE_FILE)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                transmission.closeFile();
+//            }
+//        } else if (header.equals(Headers.SEND_COMPLETE)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                transmission.onDone();
+//                transmissionsIn.remove(transmission.id);
+//            }
+//        } else if (header.equals(Headers.GZIP_DATA)) {
+//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
+//            if (transmission != null) {
+//                //This line allows to write packet data into file and send feedback about operation success
+//                //28.08.2019
+//                try {
+//                    int offset = receivedMessage[0].getBytes().length + "\n".length();
+//                    transmission.realData += length - offset;
+//                    transmission.writeToFile(GzipUtils.unzip(data, offset, length - offset));
+//                } catch (IOException e) {
+//                    //fail
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
     }
 
     public Sendere() {
@@ -213,7 +243,7 @@ public abstract class Sendere {
             throw new RuntimeException("There are no free UDP ports in range " + START_PORT + "-" + END_PORT + ". Sendere need at least one of them to run.");
         }
 
-        HASH = System.currentTimeMillis();
+        HASH = ThreadLocalRandom.current().nextLong();
         System.out.println("Порт обнаружения " + discoveryPort);
         startReceiving();
     }
@@ -290,7 +320,7 @@ public abstract class Sendere {
             discoverySocket = new MulticastSocket(DISCOVERY_PORT);
             discoverySocket.joinGroup(InetAddress.getByName("224.0.0.1"));
         } catch (IOException e) {
-            onInternalError(2,DISCOVERY_PORT+"");
+            onInternalError(2, DISCOVERY_PORT + "");
             e.printStackTrace();
             return;
         }
@@ -304,7 +334,7 @@ public abstract class Sendere {
                         e.printStackTrace();
                         continue;
                     }
-                    String[] receivedData = new String(discoveryPacket.getData(), 0, discoveryPacket.getLength(),StandardCharsets.UTF_8).split("\n");
+                    String[] receivedData = new String(discoveryPacket.getData(), 0, discoveryPacket.getLength(), StandardCharsets.UTF_8).split("\n");
                     if (receivedData.length != 3)
                         continue;
                     Header header = new Header(receivedData[0]);
@@ -477,12 +507,16 @@ public abstract class Sendere {
             remoteUsers.add(new RemoteUser(getNickname(), hash, address, port));
     }*/
 
-    public boolean sendMessage(RemoteUser remoteUser, Header header, String message) {
+    public boolean sendMessage(RemoteUser remoteUser, byte header, String message) {
         return sendMessage(remoteUser, header, message.getBytes(), message.getBytes().length);
     }
 
-    public boolean sendMessage(RemoteUser remoteUser, Header header, byte[] data, int length) {
+    public boolean sendMessage(RemoteUser remoteUser, byte header, byte[] data, int length) {
         return remoteUser.sendMessage(header, data, length);
+    }
+
+    public boolean sendMessage(RemoteUser remoteUser, byte flags, byte[]... data) {
+        return remoteUser.sendMessage(flags, data);
     }
 
     public int getMainPort() {
