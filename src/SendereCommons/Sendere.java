@@ -73,6 +73,9 @@ public abstract class Sendere {
     private HashSet<ArpEntry> addressesToPing = new HashSet<ArpEntry>();
 
     private void onReceive(RemoteUser sender, byte flags, byte[] data) {
+        // empty packet
+        if (data.length == 0)
+            return;
         // TODO: 11.04.2021 stub
         if (flags != 0)
             return;
@@ -93,44 +96,32 @@ public abstract class Sendere {
                 remoteUsers.put(sender);
                 onRemoteUserConnected(sender);
                 if (Settings.getVisibility() == 1) {
-                    String pongMessage = Settings.getNickname() + "\n" + HASH;
                     byte[] byteSUID = Converters.longToBytes(HASH);
                     byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
                     byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
                     sendMessage(sender, (byte) 0, new byte[]{Headers.PONG}, byteSUID, nicknameLength, byteNickname);
                 }
             }
+        } else if (header == Headers.PONG){
+            long remoteSUID = Converters.bytesToLong(data, 1);
+            int remoteNickLength = data[9];
+            String remoteNick = new String(data, 10, remoteNickLength, StandardCharsets.UTF_8);
+            // self-ping
+            // 11.04.2021 huku
+            if (remoteSUID == HASH && remoteNick.equals(Settings.getNickname()))
+                return;
+            RemoteUser existingUser = remoteUsers.getByHash(remoteSUID);
+            if (existingUser != null) {
+                onRemoteUserUpdated(existingUser);
+            } else {
+                sender.identify(remoteNick, remoteSUID);
+                remoteUsers.put(sender);
+                onRemoteUserFound(sender);
+            }
+        } else if (header == Headers.TEXT) {
+            if (Settings.isAllowChat())
+                onTextMessageReceived(sender, new String(data,1,data.length-1, StandardCharsets.UTF_8));
         }
-//
-//        if (header.equals(Headers.PING) && receivedMessage[0].equals(Headers.TRUE.toString())) {
-//            if (receivedMessage[1].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[2]) == HASH)
-//                return;
-//            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[2]));
-//            if (existingUser != null) {
-//                onRemoteUserUpdated(existingUser);
-//            } else {
-//                sender.identify(receivedMessage[1], Long.parseLong(receivedMessage[2]));
-//                remoteUsers.put(sender);
-//                onRemoteUserConnected(sender);
-//                if (Settings.getVisibility() == 1) {
-//                    String pongMessage = Settings.getNickname() + "\n" + HASH;
-//                    sendMessage(sender, Headers.PONG, pongMessage);
-//                }
-//            }
-//        } else if (header.equals(Headers.PONG)) {
-//            if (receivedMessage[0].equals(Settings.getNickname()) && Long.parseLong(receivedMessage[1]) == HASH)
-//                return;
-//            RemoteUser existingUser = remoteUsers.getByHash(Long.parseLong(receivedMessage[1]));
-//            if (existingUser != null) {
-//                onRemoteUserUpdated(existingUser);
-//            } else {
-//                sender.identify(receivedMessage[0], Long.parseLong(receivedMessage[1]));
-//                remoteUsers.put(sender);
-//                onRemoteUserFound(sender);
-//            }
-//        } else if (header.equals(Headers.TEXT)) {
-//            if (Settings.isAllowChat())
-//                onTextMessageReceived(sender, receivedMessage[0]);
 //        } else if ((header.equals(Headers.SEND_REQUEST))) {
 //            if (!Settings.isAllowReceiving()) {
 //                // TODO: 21.06.2020 make special message if user don't allows to receive files
@@ -289,7 +280,7 @@ public abstract class Sendere {
     public abstract void onUserDisconnected(RemoteUser remoteUser);
 
     public void startReceiving() {
-        Thread thread = new Thread(new Runnable() {
+        final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (allowReceiving) {
@@ -302,8 +293,8 @@ public abstract class Sendere {
                             }
 
                             @Override
-                            public void onReceive(byte[] header, byte[] data, int length) {
-                                Sendere.this.onReceive(this, header, data, length);
+                            public void onReceive(byte flags, byte[] data) {
+                                Sendere.this.onReceive(this, flags, data);
                             }
                         };
                     } catch (IOException e) {
@@ -337,13 +328,8 @@ public abstract class Sendere {
                     String[] receivedData = new String(discoveryPacket.getData(), 0, discoveryPacket.getLength(), StandardCharsets.UTF_8).split("\n");
                     if (receivedData.length != 3)
                         continue;
-                    Header header = new Header(receivedData[0]);
-                    if (!header.equals(Headers.DEVICE_DISCOVERY))
+                    if (!receivedData[0].equals(Headers.DEVICE_DISCOVERY))
                         continue;
-                    if (checkSendereOnAddressMessage == null) {
-                        checkSendereOnAddressMessage = (Settings.getVisibility() == 1 ?
-                                (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
-                    }
                     try {
                         Socket remoteSocket = new Socket(InetAddress.getByName(receivedData[1]), Integer.parseInt(receivedData[2]));
                         RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
@@ -354,11 +340,14 @@ public abstract class Sendere {
                             }
 
                             @Override
-                            public void onReceive(byte[] header, byte[] data, int length) {
-                                Sendere.this.onReceive(this, header, data, length);
+                            public void onReceive(byte flags, byte[] data) {
+                                Sendere.this.onReceive(this, flags, data);
                             }
                         };
-                        sendMessage(unidentifiedUser, Headers.PING, checkSendereOnAddressMessage);
+                        byte[] byteSUID = Converters.longToBytes(HASH);
+                        byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
+                        byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
+                        sendMessage(unidentifiedUser, (byte) 0, new byte[]{Headers.PING}, byteSUID, nicknameLength, byteNickname);
                     } catch (IOException e) {
 //            if (address[0] == 127)
 //                e.printStackTrace();
@@ -417,34 +406,6 @@ public abstract class Sendere {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
 
-        }
-    }
-
-    String checkSendereOnAddressMessage;
-
-    private void checkSendereOnAddress(byte[] address, int port) {
-        if (checkSendereOnAddressMessage == null) {
-            checkSendereOnAddressMessage = (Settings.getVisibility() == 1 ?
-                    (Headers.TRUE + "\n" + Settings.getNickname() + "\n" + HASH) : Headers.FALSE.toString());
-        }
-        try {
-            Socket remoteSocket = new Socket(InetAddress.getByAddress(address), port);
-            RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
-                @Override
-                protected void onDisconnect() {
-                    onUserDisconnected(this);
-                    remoteUsers.removeByHash(this.getHash());
-                }
-
-                @Override
-                public void onReceive(byte[] header, byte[] data, int length) {
-                    Sendere.this.onReceive(this, header, data, length);
-                }
-            };
-            sendMessage(unidentifiedUser, Headers.PING, checkSendereOnAddressMessage);
-        } catch (IOException e) {
-//            if (address[0] == 127)
-//                e.printStackTrace();
         }
     }
 
@@ -508,7 +469,7 @@ public abstract class Sendere {
     }*/
 
     public boolean sendMessage(RemoteUser remoteUser, byte header, String message) {
-        return sendMessage(remoteUser, header, message.getBytes(), message.getBytes().length);
+        return sendMessage(remoteUser, header, message.getBytes(StandardCharsets.UTF_8), message.getBytes().length);
     }
 
     public boolean sendMessage(RemoteUser remoteUser, byte header, byte[] data, int length) {
@@ -538,15 +499,16 @@ public abstract class Sendere {
     }*/
 
     public void processSendRequest(boolean allow, TransmissionIn transmission) {
-        if (allow)
-            transmissionsIn.put(transmission.id, transmission);
-        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id);
-        if (!inRequests.isEmpty()) {
-            currentInRequest = inRequests.removeLast();
-            onSendRequest(currentInRequest);
-        } else {
-            userReady = true;
-        }
+        // TODO: 11.04.2021 stub
+//        if (allow)
+//            transmissionsIn.put(transmission.id, transmission);
+//        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id);
+//        if (!inRequests.isEmpty()) {
+//            currentInRequest = inRequests.removeLast();
+//            onSendRequest(currentInRequest);
+//        } else {
+//            userReady = true;
+//        }
     }
 
     public boolean createRemoteDirectory(String relativePath, TransmissionOut transmission) {
@@ -562,6 +524,7 @@ public abstract class Sendere {
     }
 
     public void sendTransmissionRequest(TransmissionOut transmission) {
-        sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id + "\n" + transmission.filename);
+        // TODO: 11.04.2021 stub
+        //sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id + "\n" + transmission.filename);
     }
 }

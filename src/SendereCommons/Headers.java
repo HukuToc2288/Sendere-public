@@ -17,8 +17,9 @@ public class Headers {
     public static final byte SEND_RESPONSE = 27;
     public static final byte SEND_COMPLETE = 28;
     public static final byte SPEED_MEASURE = 29;
+    public static final String DEVICE_DISCOVERY = "SENDERE: k7o 8 ce7u?";
 
-   // public static final Header DEVICE_DISCOVERY = new Header("SENDERE: k7o 8 ce7u?");
+    // public static final Header DEVICE_DISCOVERY = new Header("SENDERE: k7o 8 ce7u?");
 
     // End for headers supported in all Sendere versions
 }

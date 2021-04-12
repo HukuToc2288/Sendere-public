@@ -1,16 +1,15 @@
 package SendereCommons;
 
+import lombok.Getter;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class RemoteUser {
 
@@ -19,10 +18,14 @@ public abstract class RemoteUser {
     private Socket socket;
     private int port;
     private boolean identified = false;
-    private InputStream in;
-    private OutputStream out;
+    @Getter
+    private InputStream inputStream;
+    @Getter
+    private OutputStream outputStream;
+    @Getter
     private boolean disconnected = false;
     private long lastAliveTime;
+    private SimpleNetworkInterface networkInterface;
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -47,8 +50,8 @@ public abstract class RemoteUser {
 
     private void commonInitialization(Socket socket) throws IOException {
         this.socket = socket;
-        in = socket.getInputStream();
-        out = socket.getOutputStream();
+        inputStream = socket.getInputStream();
+        outputStream = socket.getOutputStream();
         lastAliveTime = System.currentTimeMillis();
         doReceiving();
         doAlive();
@@ -74,22 +77,22 @@ public abstract class RemoteUser {
                     byte flags;
                     int length;
                     try {
-                        while (in.available() < 4 && !disconnected) {
+                        while (inputStream.available() < 4 && !disconnected) {
                             if (System.currentTimeMillis() > lastAliveTime + 5000)
                                 RemoteUser.this.onDisconnectInternal();
                             Thread.sleep(500);
                         }
-                        in.read(packetLength);
+                        inputStream.read(packetLength);
                         length = ((packetLength[0] + (packetLength[0] >= 0 ? 0 : 256)) << 16) + ((packetLength[1] + (packetLength[1] >= 0 ? 0 : 256)) << 8) + packetLength[2] + (packetLength[2] >= 0 ? 0 : 256);
                         //47 is '/' symbol's code
                         //18.09.2019
 //                    if(packetLength[3]!=47)
 //                        continue;
-                        flags = (byte) in.read();
+                        flags = (byte) inputStream.read();
                         read = 0;
                         byte[] data = new byte[length];
                         while (read < length && !disconnected)
-                            read += in.read(data, read, length - read);
+                            read += inputStream.read(data, read, length - read);
                         lastAliveTime = System.currentTimeMillis();
                         RemoteUser.this.onReceive(flags, data);
 
@@ -100,8 +103,8 @@ public abstract class RemoteUser {
                     }
                 }
                 try {
-                    in.close();
-                    out.close();
+                    inputStream.close();
+                    outputStream.close();
                 } catch (IOException e) {
                     //Okay
                     //10.09.2019
@@ -126,16 +129,16 @@ public abstract class RemoteUser {
     boolean sendAlive() {
         // Send headless packet to keep connection
         // 11.04.2021 huku
-        synchronized (out) {
+        synchronized (outputStream) {
             if (disconnected)
                 return false;
             try {
-                synchronized (out) {
+                synchronized (outputStream) {
                     // TODO: 11.04.2021 send flags: stub
-                    out.write(0);
-                    out.write(0);
-                    out.write(0);
-                    out.write(0);
+                    outputStream.write(0);
+                    outputStream.write(0);
+                    outputStream.write(0);
+                    outputStream.write(0);
                 }
                 return true;
             } catch (SocketException e) {
@@ -175,11 +178,11 @@ public abstract class RemoteUser {
             //Don't pay attention on "Synchronization on a non-final field" warning
             //output stream never changing even if javac can't understand it
             //19.09.2019
-            synchronized (out) {
-                out.write(byteLength);
-                out.write(flags);
+            synchronized (outputStream) {
+                outputStream.write(byteLength);
+                outputStream.write(flags);
                 for (byte[] dataPiece: data){
-                    out.write(dataPiece);
+                    outputStream.write(dataPiece);
                 }
             }
             return true;
