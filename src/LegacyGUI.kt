@@ -156,7 +156,7 @@ class LegacyGUI {
         // nickname.setBorder(new EmptyBorder(16,16,16,16));
         container.add(nickname, constraints)
         constraints.gridy = 1
-        val address = JLabel("at " + user.address + ":" + user.port)
+        val address = JLabel("at " +  ":" + user.port)
         //nickname.setBorder(new EmptyBorder(16,16,16,16));
         container.border = EmptyBorder(8, 8, 8, 8)
         container.add(address, constraints)

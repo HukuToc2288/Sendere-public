@@ -25,8 +25,6 @@ public class SimpleNetworkInterface {
     private Thread senderThread;
     private Thread receiverThread;
 
-    private BlockingQueue<SenderQueueElement> senderQueue;
-
     private Object senderLock = new Object();
     private Object receiverLock = new Object();
 
@@ -59,58 +57,5 @@ public class SimpleNetworkInterface {
         stringAddress = tempStringAddress;
         byteAddress = tempByteAddress;
 
-        senderQueue = new ArrayBlockingQueue<>(10);
-
-        senderThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true)
-                    try {
-                        SenderQueueElement element = senderQueue.take();
-                        if (element.getUser().isDisconnected())
-                            continue;
-                        OutputStream outputStream = element.getUser().getOutputStream();
-                        byte[][] dataToSend = element.getData();
-                        int length = 0;
-                        for (byte[] dataPiece : dataToSend) {
-                            length += dataPiece.length;
-                        }
-                        byte[] byteLength = new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)};
-                        outputStream.write(byteLength);
-                        outputStream.write(element.getFlags());
-                        for (byte[] dataPiece : dataToSend) {
-                            outputStream.write(dataPiece);
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        return;
-                    } catch (IOException e) {
-
-                        e.printStackTrace();
-                    }
-            }
-        });
-        senderThread.start();
-    }
-
-    public void sendPacket(RemoteUser userToSend, byte flags, byte[][] dataToSend) {
-        try {
-            senderQueue.put(new SenderQueueElement(userToSend, flags, dataToSend));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Data
-    public static class SenderQueueElement {
-        private RemoteUser user;
-        private byte flags;
-        private byte[][] data;
-
-        public SenderQueueElement(RemoteUser userToSend, byte flags, byte[][] dataToSend) {
-            user = userToSend;
-            this.flags = flags;
-            data = dataToSend;
-        }
     }
 }

@@ -7,6 +7,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.nio.channels.spi.SelectorProvider;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -57,7 +60,7 @@ public abstract class Sendere {
     private int mainPort;
     private int discoveryPort;
     public final long HASH;
-    private ServerSocket serverSocket;
+    private ServerSocketChannel serverSocket;
     MulticastSocket discoverySocket;
     private Thread receiverThread;
     private boolean allowReceiving = true;
@@ -102,7 +105,7 @@ public abstract class Sendere {
                     sendMessage(sender, (byte) 0, new byte[]{Headers.PONG}, byteSUID, nicknameLength, byteNickname);
                 }
             }
-        } else if (header == Headers.PONG){
+        } else if (header == Headers.PONG) {
             long remoteSUID = Converters.bytesToLong(data, 1);
             int remoteNickLength = data[9];
             String remoteNick = new String(data, 10, remoteNickLength, StandardCharsets.UTF_8);
@@ -120,7 +123,7 @@ public abstract class Sendere {
             }
         } else if (header == Headers.TEXT) {
             if (Settings.isAllowChat())
-                onTextMessageReceived(sender, new String(data,1,data.length-1, StandardCharsets.UTF_8));
+                onTextMessageReceived(sender, new String(data, 1, data.length - 1, StandardCharsets.UTF_8));
         }
 //        } else if ((header.equals(Headers.SEND_REQUEST))) {
 //            if (!Settings.isAllowReceiving()) {
@@ -207,10 +210,12 @@ public abstract class Sendere {
     public Sendere() {
         for (int i = START_PORT; i <= END_PORT; i++) {
             try {
-                serverSocket = new ServerSocket(i);
+                serverSocket = ServerSocketChannel.open();
+                serverSocket.bind(new InetSocketAddress(i));
+                serverSocket.configureBlocking(false);
                 mainPort = i;
                 break;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 //e.printStackTrace();
             }
         }
@@ -279,31 +284,118 @@ public abstract class Sendere {
 
     public abstract void onUserDisconnected(RemoteUser remoteUser);
 
+    HashMap<SocketChannel, RemoteUser> userHashMap = new HashMap<>();
+
+
+    Selector selector;
+
     public void startReceiving() {
-        final Thread thread = new Thread(new Runnable() {
+        try {
+            selector = Selector.open();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        try {
+            serverSocket.register(selector, serverSocket.validOps());
+        } catch (ClosedChannelException e) {
+            e.printStackTrace();
+            return;
+        }
+        Thread selectorThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                while (allowReceiving) {
+                while (true) {
                     try {
-                        RemoteUser unidentifiedUser = new RemoteUser(serverSocket.accept()) {
-                            @Override
-                            protected void onDisconnect() {
-                                onUserDisconnected(this);
-                                remoteUsers.removeByHash(getHash());
-                            }
-
-                            @Override
-                            public void onReceive(byte flags, byte[] data) {
-                                Sendere.this.onReceive(this, flags, data);
-                            }
-                        };
+                        int count = selector.select(100);
+                        System.out.println("changed keys: "+count);
                     } catch (IOException e) {
-                        /*e.printStackTrace();*/
+                        e.printStackTrace();
+                        continue;
                     }
+
+                    // Получаем ключи на которых произошли события в момент
+                    // последней выборки
+                    //System.out.println("selector selected");
+
+                    Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                    Iterator<SelectionKey> iter = selectedKeys.iterator();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        //System.out.println("key valid");
+                        // Обработка всех возможнных событий ключа
+                        iter.remove();
+                        try {
+                            if (key.isAcceptable()) {
+                                // Принимаем соединение
+                                ServerSocketChannel channel = ((ServerSocketChannel) key.channel());
+                                SocketChannel remoteUserChannel = channel.accept();
+                                remoteUserChannel.configureBlocking(false);
+
+                                RemoteUser unidentifiedUser = new RemoteUser(remoteUserChannel) {
+                                    @Override
+                                    protected void onDisconnect() {
+                                        onUserDisconnected(this);
+                                        remoteUsers.removeByHash(getHash());
+                                    }
+
+                                    @Override
+                                    public void onReceive(byte flags, byte[] data) {
+                                        Sendere.this.onReceive(this, flags, data);
+                                    }
+                                };
+                                userHashMap.put(remoteUserChannel, unidentifiedUser);
+                                while(!remoteUserChannel.finishConnect() ){
+                                    //wait, or do something else...
+                                }
+                                remoteUserChannel.register(selector, SelectionKey.OP_READ);
+                                byte[] byteSUID = Converters.longToBytes(HASH);
+                                byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
+                                byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
+                                sendMessage(unidentifiedUser, (byte) 0, new byte[]{Headers.PING}, byteSUID, nicknameLength, byteNickname);
+                            }
+                            if (key.isConnectable()) {
+                                // Устанавливаем соединение
+                                System.out.println("connectable");
+                                key.interestOps(SelectionKey.OP_READ);
+                            }
+                            if (key.isReadable()) {
+                                // Читаем данные
+                                System.out.println("readable");
+                                SocketChannel channel = ((SocketChannel) key.channel());
+                                //channel.register(selector,SelectionKey.OP_READ);
+                                RemoteUser remoteUser = userHashMap.get(channel);
+                                ByteBuffer buffer = ByteBuffer.allocate(4);
+                                int read = 0;
+                                while (read < 4) {
+                                    int readed = channel.read(buffer);
+                                    read += readed;
+                                    System.out.println(readed);
+                                }
+                                byte[] lengthAndHeader = buffer.array();
+                                int length = ((lengthAndHeader[0] + (lengthAndHeader[0] >= 0 ? 0 : 256)) << 16) + ((lengthAndHeader[1] + (lengthAndHeader[1] >= 0 ? 0 : 256)) << 8) + lengthAndHeader[2] + (lengthAndHeader[2] >= 0 ? 0 : 256);
+                                byte flags = lengthAndHeader[3];
+                                ByteBuffer data = ByteBuffer.allocate(length);
+                                read = 0;
+                                while (read < length)
+                                    read += channel.read(data);
+
+                                onReceive(remoteUser, flags, data.array());
+                            }
+                            if (key.isWritable()) {
+                                // Пишем данные
+                                System.out.println("writable");
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    selectedKeys.clear();
                 }
             }
         });
-        thread.start();
+        selectorThread.start();
 
         final DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024], 1024);
         final MulticastSocket discoverySocket;
@@ -330,8 +422,11 @@ public abstract class Sendere {
                         continue;
                     if (!receivedData[0].equals(Headers.DEVICE_DISCOVERY))
                         continue;
+                    if (Integer.parseInt(receivedData[2]) == mainPort){
+                        continue;
+                    }
                     try {
-                        Socket remoteSocket = new Socket(InetAddress.getByName(receivedData[1]), Integer.parseInt(receivedData[2]));
+                        SocketChannel remoteSocket = SocketChannel.open();
                         RemoteUser unidentifiedUser = new RemoteUser(remoteSocket) {
                             @Override
                             protected void onDisconnect() {
@@ -344,10 +439,17 @@ public abstract class Sendere {
                                 Sendere.this.onReceive(this, flags, data);
                             }
                         };
+                        remoteSocket.configureBlocking(false);
+                        userHashMap.put(remoteSocket, unidentifiedUser);
+                        remoteSocket.connect(new InetSocketAddress(InetAddress.getByName(receivedData[1]), Integer.parseInt(receivedData[2])));
+                        while(!remoteSocket.finishConnect() ){
+                            //wait, or do something else...
+                        }
+                        remoteSocket.register(selector, SelectionKey.OP_READ);
                         byte[] byteSUID = Converters.longToBytes(HASH);
                         byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
                         byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
-                        sendMessage(unidentifiedUser, (byte) 0, new byte[]{Headers.PING}, byteSUID, nicknameLength, byteNickname);
+                        //sendMessage(unidentifiedUser, (byte) 0, new byte[]{Headers.PING}, byteSUID, nicknameLength, byteNickname);
                     } catch (IOException e) {
 //            if (address[0] == 127)
 //                e.printStackTrace();

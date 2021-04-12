@@ -30,50 +30,25 @@ public class Starter {
     static final Object changeMessageLock = new Object();
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        //new Main().main(args);
-        final Lock lock = new ReentrantLock();
-        final Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        synchronized (pauseThreadLock) {
-                            pauseThreadLock.wait();
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        return;
-                    }
-                    for (int j = 0; j < 10; j++) {
-                        System.out.print(packet);
+        ArrayList<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
                         try {
-                            Thread.sleep(100);
+                            Thread.sleep(10);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
-                    System.out.println();
-                    packet = null;
-                    synchronized (changeMessageLock) {
-                        changeMessageLock.notify();
-                    }
                 }
-            }
-        });
-        thread.start();
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-
-            synchronized (changeMessageLock) {
-                packet = "Ьпръ " + ++cnt;
-            }
-            synchronized (pauseThreadLock) {
-                pauseThreadLock.notify();
-            }
-            synchronized (changeMessageLock){
-                changeMessageLock.wait();
-            }
+            });
+            thread.start();
+            threads.add(thread);
+            System.out.println(i);
         }
+        //new Main().main(args);
     }
 }
 

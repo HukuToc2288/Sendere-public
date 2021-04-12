@@ -187,7 +187,7 @@ public class Main {
                             println("Пользователь " + i + ":");
                             println("Хэш-сумма:" + users.get(i).getHash());
                             println("Никнейм: " + users.get(i).getNickname());
-                            println("Локальнй адрес: " + users.get(i).getAddress());
+                            println("Локальнй адрес: ");
                             println("");
                         }
                     } else if (line.startsWith("tell ") && line.split(" ").length >= 3) {
