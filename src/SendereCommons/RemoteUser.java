@@ -63,47 +63,50 @@ public abstract class RemoteUser {
     }
 
     private void doReceiving() {
-        Thread receiverThread = new Thread(() -> {
-            while (!disconnected){
-                int read;
-                byte[] packetLength = new byte[4];
-                byte[] header = new byte[4];
-                int length;
-                try {
-                    while (in.available()<8&&!disconnected){
-                        if(System.currentTimeMillis() > lastAliveTime+5000)
-                            onDisconnectInternal();
-                        Thread.sleep(500);
-                    }
-                    in.read(packetLength);
-                    length = ((packetLength[0] + (packetLength[0]>=0 ? 0 : 256))<<16) + ((packetLength[1] + (packetLength[1]>=0 ? 0 : 256))<<8) + packetLength[2] + (packetLength[2]>=0 ? 0 : 256);
-                    //47 is '/' symbol's code
-                    //18.09.2019
-                    if(packetLength[3]!=47)
-                        continue;
-                    in.read(header);
-                    read = 0;
-                    byte[] data = new byte[length];
-                    while (read<length&&!disconnected)
-                        read+=in.read(data, read, length-read);
-                    lastAliveTime = System.currentTimeMillis();
-                    if(!Arrays.equals(header, Headers.IM_ALIVE.getBytes())) {
-                        onReceive(header, data, length);
-                    }
+        Thread receiverThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!disconnected) {
+                    int read;
+                    byte[] packetLength = new byte[4];
+                    byte[] header = new byte[4];
+                    int length;
+                    try {
+                        while (in.available() < 8 && !disconnected) {
+                            if (System.currentTimeMillis() > lastAliveTime + 5000)
+                                RemoteUser.this.onDisconnectInternal();
+                            Thread.sleep(500);
+                        }
+                        in.read(packetLength);
+                        length = ((packetLength[0] + (packetLength[0] >= 0 ? 0 : 256)) << 16) + ((packetLength[1] + (packetLength[1] >= 0 ? 0 : 256)) << 8) + packetLength[2] + (packetLength[2] >= 0 ? 0 : 256);
+                        //47 is '/' symbol's code
+                        //18.09.2019
+//                    if(packetLength[3]!=47)
+//                        continue;
+                        in.read(header);
+                        read = 0;
+                        byte[] data = new byte[length];
+                        while (read < length && !disconnected)
+                            read += in.read(data, read, length - read);
+                        lastAliveTime = System.currentTimeMillis();
+                        if (!Arrays.equals(header, Headers.IM_ALIVE.getBytes())) {
+                            RemoteUser.this.onReceive(header, data, length);
+                        }
 
-                } catch (SocketException | InterruptedException e) {
-                    onDisconnectInternal();
-                } catch (IOException e) {
-                    //e.printStackTrace();
+                    } catch (SocketException | InterruptedException e) {
+                        RemoteUser.this.onDisconnectInternal();
+                    } catch (IOException e) {
+                        //e.printStackTrace();
+                    }
                 }
-            }
-            try {
-                in.close();
-                out.close();
-            } catch (IOException e) {
-                //Okay
-                //10.09.2019
-                e.printStackTrace();
+                try {
+                    in.close();
+                    out.close();
+                } catch (IOException e) {
+                    //Okay
+                    //10.09.2019
+                    e.printStackTrace();
+                }
             }
         });
         receiverThread.start();

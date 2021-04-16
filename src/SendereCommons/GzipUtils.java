@@ -13,13 +13,13 @@ public class GzipUtils {
             cores = Runtime.getRuntime().availableProcessors();
     }
 
-    public static byte[][] doMulticoreGZip(byte[] buffer, int length) {
-        int blockSize = (length / cores);
-        int lastBlockSize = blockSize+length % cores;
-        byte[][] datas = new byte[cores][];
+    public static byte[][] doMulticoreGZip(final byte[] buffer, int length) {
+        final int blockSize = (length / cores);
+        final int lastBlockSize = blockSize+length % cores;
+        final byte[][] datas = new byte[cores][];
         Thread[] threads = new Thread[cores];
         for (int i = 0; i < datas.length; i++) {
-            int finalI = i;
+            final int finalI = i;
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -62,9 +62,16 @@ public class GzipUtils {
     public static byte[] unzip(byte[] gdata, int off, int len) throws IOException {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(gdata,off, len);
         BufferedInputStream gzipInputStream = new BufferedInputStream(new GZIPInputStream(byteArrayInputStream));
-        byte[] data = new byte[gzipInputStream.available()];
-        gzipInputStream.read(data);
+        byte[] buffer = new byte[1024];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        int readCount;
+        while ((readCount = gzipInputStream.read(buffer)) > 0) {
+            out.write(buffer, 0, readCount);
+        }
+
         gzipInputStream.close();
-        return data;
+        out.close();
+        return out.toByteArray();
     }
 }

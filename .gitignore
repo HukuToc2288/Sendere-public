@@ -66,13 +66,4 @@ fastlane/readme.md
 
 # META-INF
 META-INF/
-/lib/kotlin-reflect.jar
-/lib/kotlin-reflect-sources.jar
-/lib/kotlin-stdlib.jar
-/lib/kotlin-stdlib-jdk7.jar
-/lib/kotlin-stdlib-jdk7-sources.jar
-/lib/kotlin-stdlib-jdk8.jar
-/lib/kotlin-stdlib-jdk8-sources.jar
-/lib/kotlin-stdlib-sources.jar
-/lib/kotlin-test.jar
-/lib/kotlin-test-sources.jar
+/lib/

@@ -1,5 +1,6 @@
 import SendereCommons.OSUtils;
 import SendereCommons.OSUtilsKt;
+import SendereCommons.RSATest;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -12,8 +13,6 @@ import java.util.logging.Logger;
 public class Starter {
     public static void main(String[] args) {
         new Main().main(args);
-        //new LegacyGUI().init();
-        //main2(args);
     }
 
     static int i = 0;

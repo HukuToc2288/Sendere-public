@@ -18,6 +18,7 @@ public abstract class Sendere {
     //21.08.2019
     public static final int START_PORT = 1337;
     public static final int END_PORT = 1356;
+    public static final int DISCOVERY_PORT = 1338;
 
     /*
      Those constants defines the version of Sendere library
@@ -120,7 +121,7 @@ public abstract class Sendere {
                 }
             }
         } else if (header.equals(Headers.SEND_RESPONSE)) {
-            TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
+            final TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
             if (transmission != null) {
                 if (receivedMessage[0].equals(Headers.TRUE.toString())) {
                     onSendResponse(true, transmission);
@@ -283,7 +284,16 @@ public abstract class Sendere {
         });
         thread.start();
 
-        DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024], 1024);
+        final DatagramPacket discoveryPacket = new DatagramPacket(new byte[1024], 1024);
+        final MulticastSocket discoverySocket;
+        try {
+            discoverySocket = new MulticastSocket(DISCOVERY_PORT);
+            discoverySocket.joinGroup(InetAddress.getByName("224.0.0.1"));
+        } catch (IOException e) {
+            onInternalError(2,DISCOVERY_PORT+"");
+            e.printStackTrace();
+            return;
+        }
         Thread udpDiscoveryThread = new Thread(new Runnable() {
             @Override
             public void run() {
