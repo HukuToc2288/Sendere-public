@@ -1,4 +1,10 @@
 import SendereCommons.*;
+import SendereCommons.protopackets.CloseFilePacket;
+import SendereCommons.protopackets.RawDataPacket;
+import SendereCommons.protopackets.RemoteErrorPacket;
+import SendereCommons.protopackets.TransmissionControlPacket;
+import com.google.protobuf.Any;
+import com.google.protobuf.ByteString;
 
 import java.io.*;
 import java.net.*;
@@ -27,6 +33,29 @@ public class Main {
         }
         println("Инициализация сервиса...");
         sendere = new Sendere() {
+            @Override
+            protected void onRemoteErrorReceived(RemoteUser user, RemoteErrorPacket.ErrorType errorType, String extraMessage) {
+                String errorDescription = null;
+                switch (errorType) {
+                    case NOT_PROTOBUF:
+                        errorDescription = "Пакет не в формате protobuf";
+                        break;
+                    case INVALID_FORMAT:
+                        errorDescription = "Формат пакета на удалённом уст-ве отличается от передаваемого: " + extraMessage;
+                        break;
+                    case UNRECOGNIZED_PACKET:
+                        errorDescription = "Удалённое уст-во не может обрабатывать данный тип пакета: " + extraMessage;
+                        break;
+                    case CHAT_NOT_ALLOWED:
+                        errorDescription = "Удалённый пользователь запрещает приём текстовых сообщений";
+                        break;
+                    default:
+                        errorDescription = "Неизвестная ошибка: " + extraMessage;
+                        break;
+                }
+                System.err.printf("Ошибка от пользоватля %s [%d]: %s\r\n", user, sendere.getRemoteUsers().indexOf(user), errorDescription);
+            }
+
             @Override
             public void onRemoteUserUpdated(RemoteUser user) {
 
@@ -130,8 +159,8 @@ public class Main {
                                 @Override
                                 public boolean writeToFile(byte[] data, int off, int len) {
                                     try {
-                                        writer.write(data,off, len);
-                                        totalBytesReceived+=len-off;
+                                        writer.write(data, off, len);
+                                        totalBytesReceived += len - off;
                                         return true;
                                     } catch (IOException e) {
                                         return false;
@@ -155,9 +184,9 @@ public class Main {
 
                                 @Override
                                 public void onDone() {
-                                    int totalTime = (int) ((System.currentTimeMillis()-startTime)/1000);
+                                    int totalTime = (int) ((System.currentTimeMillis() - startTime) / 1000);
                                     println(String.format("Приём %1$s успешно завершён", id));
-                                    println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", ((double)totalBytesReceived)/1024/1024/totalTime, ((double)realData)/1024/1024/totalTime));
+                                    println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", ((double) totalBytesReceived) / 1024 / 1024 / totalTime, ((double) realData) / 1024 / 1024 / totalTime));
                                 }
                             };
 
@@ -201,7 +230,7 @@ public class Main {
                             println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка");
                             continue;
                         }
-                        sendere.sendMessage(tempUser, Headers.TEXT, split[2]);
+                        sendere.sendTextMessage(tempUser, split[2]);
                         println("Сообщение отправлено");
                         if (!Settings.isAllowChat())
                             println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ");
@@ -248,7 +277,10 @@ public class Main {
                             @Override
                             public void start() {
                                 recursiveSend(filename);
-                                sendere.sendMessage(user, Headers.SEND_COMPLETE, String.valueOf(id));
+                                sendere.sendMessage(user, (byte) 0, TransmissionControlPacket.newBuilder()
+                                        .setSignal(TransmissionControlPacket.Signal.SENDING_COMPLETE)
+                                        .setTransmissionId(this.getId())
+                                        .build());
                                 onSuccess();
                             }
 
@@ -269,7 +301,8 @@ public class Main {
                                 if (!file.exists())
                                     return;
                                 if (file.isDirectory()) {
-                                    sendere.createRemoteDirectory(currentRelativePath, this);
+                                    if (!sendere.createRemoteDirectory(currentRelativePath, this))
+                                        stop = true;
                                     if (stop)
                                         return;
                                     for (String name : file.list()) {
@@ -285,37 +318,44 @@ public class Main {
                                         byte[] gzipPrefix = (id + "\n").getBytes();
                                         while ((dataLength = in.read(data)) != -1) {
                                             ByteArrayOutputStream outputStream;
-                                            if (Settings.isAllowGzip()){
-                                                byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
-                                                for (int i = 0; i < gdatas.length; i++) {
-                                                    outputStream = new ByteArrayOutputStream();
-                                                    if (gdatas[i].length < dataLength){
-                                                        outputStream.write(gzipPrefix);
-                                                        outputStream.write(gdatas[i]);
-                                                        sendere.sendMessage(user, Headers.GZIP_DATA, outputStream.toByteArray(), gdatas[i].length+gzipPrefix.length);
-                                                    } else {
-                                                        //If we don't managed to make compressed block size lower than original
-                                                        //20.06.2020 huku
-                                                        outputStream = new ByteArrayOutputStream();
-                                                        outputStream.write(prefix);
-                                                        outputStream.write(data);
-                                                        sendere.sendMessage(user, Headers.RAW_DATA,outputStream.toByteArray(), prefix.length + dataLength);
-                                                    }
-                                                    outputStream.close();
-                                                }
-                                            }else {
-                                                outputStream = new ByteArrayOutputStream();
-                                                outputStream.write(prefix);
-                                                outputStream.write(data);
-                                                sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
-                                                outputStream.close();
-                                            }
+                                            // TODO: 16.04.2021 add GZip support, huku
+//                                            if (Settings.isAllowGzip()) {
+//                                                byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
+//                                                for (int i = 0; i < gdatas.length; i++) {
+//                                                    outputStream = new ByteArrayOutputStream();
+//                                                    if (gdatas[i].length < dataLength) {
+//                                                        outputStream.write(gzipPrefix);
+//                                                        outputStream.write(gdatas[i]);
+//                                                        sendere.sendMessage(user, Headers.GZIP_DATA, outputStream.toByteArray(), gdatas[i].length + gzipPrefix.length);
+//                                                    } else {
+//                                                        //If we don't managed to make compressed block size lower than original
+//                                                        //20.06.2020 huku
+//                                                        outputStream = new ByteArrayOutputStream();
+//                                                        outputStream.write(prefix);
+//                                                        outputStream.write(data);
+//                                                        sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
+//                                                    }
+//                                                    outputStream.close();
+//                                                }
+//                                            } else {
+                                            outputStream = new ByteArrayOutputStream();
+                                            outputStream.write(prefix);
+                                            outputStream.write(data);
+                                            sendere.sendMessage(user, (byte) 0, RawDataPacket.newBuilder()
+                                                    .setTransmissionId(this.getId())
+                                                    .setData(ByteString.copyFrom(data, 0, dataLength))
+                                                    .build());
+                                            //sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
+                                            outputStream.close();
+                                            //}
                                             if (stop)
                                                 return;
                                         }
-                                        sendere.sendMessage(user, Headers.CLOSE_FILE , String.valueOf(id));
+                                        sendere.sendMessage(user, (byte) 0, CloseFilePacket.newBuilder().setTransmissionId(this.getId()).build());
+                                        //sendere.sendMessage(user, Headers.CLOSE_FILE, String.valueOf(id));
                                     } catch (IOException e) {
                                         e.printStackTrace();
+                                        stop = true;
                                     }
                                 }
                             }

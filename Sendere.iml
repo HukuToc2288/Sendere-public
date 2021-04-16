@@ -9,5 +9,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="org.projectlombok:lombok:1.18.12" level="project" />
     <orderEntry type="library" name="KotlinJavaRuntime" level="project" />
+    <orderEntry type="library" name="com.google.protobuf:protobuf-java:4.0.0-rc-2" level="project" />
   </component>
 </module>

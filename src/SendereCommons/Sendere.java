@@ -1,5 +1,11 @@
 package SendereCommons;
 
+import SendereCommons.protopackets.*;
+
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.sun.xml.internal.bind.v2.TODO;
 import lombok.Setter;
 import lombok.SneakyThrows;
 
@@ -64,8 +70,8 @@ public abstract class Sendere {
     private boolean userReady = true;
 
     private RemoteUserList remoteUsers;
-    private HashMap<String, TransmissionIn> transmissionsIn = new HashMap<String, TransmissionIn>();
-    private HashMap<String, TransmissionOut> transmissionsOut = new HashMap<String, TransmissionOut>();
+    private HashMap<Long, TransmissionIn> transmissionsIn = new HashMap<Long, TransmissionIn>();
+    private HashMap<Long, TransmissionOut> transmissionsOut = new HashMap<Long, TransmissionOut>();
 
     private LinkedList<InRequest> inRequests = new LinkedList<InRequest>();
     private InRequest currentInRequest;
@@ -79,11 +85,23 @@ public abstract class Sendere {
         // TODO: 11.04.2021 stub
         if (flags != 0)
             return;
-        byte header = data[0];
-        if (header == Headers.PING) {
-            long remoteSUID = Converters.bytesToLong(data, 1);
-            int remoteNickLength = data[9];
-            String remoteNick = new String(data, 10, remoteNickLength, StandardCharsets.UTF_8);
+        Any anyPacket;
+        try {
+            anyPacket = Any.parseFrom(data);
+        } catch (InvalidProtocolBufferException e) {
+            sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.NOT_PROTOBUF);
+            return;
+        }
+        if (anyPacket.is(PingPacket.class)) {
+            PingPacket packet = null;
+            try {
+                packet = anyPacket.unpack(PingPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, PingPacket.class.getSimpleName());
+                return;
+            }
+            long remoteSUID = packet.getSuid();
+            String remoteNick = packet.getNickname();
             // self-ping
             // 11.04.2021 huku
             if (remoteSUID == HASH && remoteNick.equals(Settings.getNickname()))
@@ -99,13 +117,20 @@ public abstract class Sendere {
                     byte[] byteSUID = Converters.longToBytes(HASH);
                     byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
                     byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
-                    sendMessage(sender, (byte) 0, new byte[]{Headers.PONG}, byteSUID, nicknameLength, byteNickname);
+
+                    sendMessage(sender, (byte) 0, Any.pack(PongPacket.newBuilder().setSuid(HASH).setNickname(Settings.getNickname()).build()).toByteArray());
                 }
             }
-        } else if (header == Headers.PONG){
-            long remoteSUID = Converters.bytesToLong(data, 1);
-            int remoteNickLength = data[9];
-            String remoteNick = new String(data, 10, remoteNickLength, StandardCharsets.UTF_8);
+        } else if (anyPacket.is(PongPacket.class)) {
+            PongPacket packet;
+            try {
+                packet = anyPacket.unpack(PongPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, PongPacket.class.getSimpleName());
+                return;
+            }
+            long remoteSUID = packet.getSuid();
+            String remoteNick = packet.getNickname();
             // self-ping
             // 11.04.2021 huku
             if (remoteSUID == HASH && remoteNick.equals(Settings.getNickname()))
@@ -118,75 +143,156 @@ public abstract class Sendere {
                 remoteUsers.put(sender);
                 onRemoteUserFound(sender);
             }
-        } else if (header == Headers.TEXT) {
-            if (Settings.isAllowChat())
-                onTextMessageReceived(sender, new String(data,1,data.length-1, StandardCharsets.UTF_8));
+        } else if (anyPacket.is(RemoteErrorPacket.class)) {
+            RemoteErrorPacket packet;
+            try {
+                packet = anyPacket.unpack(RemoteErrorPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                // TODO: 15.04.2021 we can face circular error sending if both clients will constantly throw exceptions
+                // 15.04.2021 huku
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, RemoteErrorPacket.class.getSimpleName());
+                return;
+            }
+            onRemoteErrorReceived(sender, packet.getErrorType(), packet.getExtraMessage());
+        } else if (anyPacket.is(TextPacket.class)) {
+            TextPacket packet;
+            try {
+                packet = anyPacket.unpack(TextPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, TextPacket.class.getSimpleName());
+                return;
+            }
+            if (Settings.isAllowChat()) {
+                onTextMessageReceived(sender, packet.getText());
+            } else {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.CHAT_NOT_ALLOWED);
+            }
+        } else if (anyPacket.is(SendRequestPacket.class)) {
+            SendRequestPacket packet;
+            try {
+                packet = anyPacket.unpack(SendRequestPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, SendRequestPacket.class.getSimpleName());
+                return;
+            }
+            if (!Settings.isAllowReceiving()) {
+                // TODO: 21.06.2020 make special message if user don't allows to receive files
+                /*
+                 * Now requests process as it canceled by user, so sender unable to determine
+                 * if request really was canceled by user or user don't allows to receive files at all
+                 * 21.06.2020 huku
+                 */
+                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, packet.getTransmissionId()));
+            } else {
+                InRequest request = new InRequest(sender, packet.getIsDirectory(), packet.getTransmissionId(), packet.getFileName());
+                if (userReady) {
+                    userReady = false;
+                    currentInRequest = request;
+                    onSendRequest(request);
+                } else {
+                    inRequests.add(request);
+                }
+            }
+        } else if (anyPacket.is(SendResponsePacket.class)) {
+            SendResponsePacket packet;
+            try {
+                packet = anyPacket.unpack(SendResponsePacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, SendResponsePacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionOut transmission = transmissionsOut.get(packet.getTransmissionId());
+            if (transmission != null) {
+                if (packet.getAccepted()) {
+                    onSendResponse(true, transmission);
+                    Thread transmissionThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            transmission.start();
+                        }
+                    });
+                    transmissionThread.start();
+                } else {
+                    onSendResponse(false, transmission);
+                    transmissionsOut.remove(packet.getTransmissionId());
+                }
+            }
+        } else if (anyPacket.is(CreateFilePacket.class)) {
+            CreateFilePacket packet;
+            try {
+                packet = anyPacket.unpack(CreateFilePacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, CreateFilePacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
+            if (transmission != null) {
+                transmission.createFile(packet.getFileName());
+            }
+        } else if (anyPacket.is(CreateDirectoryPacket.class)) {
+            CreateDirectoryPacket packet;
+            try {
+                packet = anyPacket.unpack(CreateDirectoryPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, CreateDirectoryPacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
+            if (transmission != null) {
+                transmission.createDirectory(packet.getFileName());
+            }
+        } else if (anyPacket.is(RawDataPacket.class)) {
+            RawDataPacket packet;
+            try {
+                packet = anyPacket.unpack(RawDataPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, RawDataPacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
+            if (transmission != null) {
+                transmission.writeToFile(packet.getData().toByteArray());
+            }
+        } else if (anyPacket.is(CloseFilePacket.class)) {
+            CloseFilePacket packet;
+            try {
+                packet = anyPacket.unpack(CloseFilePacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, CloseFilePacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
+            if (transmission != null) {
+                transmission.closeFile();
+            }
+        } else if (anyPacket.is(TransmissionControlPacket.class)) {
+            TransmissionControlPacket packet;
+            try {
+                packet = anyPacket.unpack(TransmissionControlPacket.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, TransmissionControlPacket.class.getSimpleName());
+                return;
+            }
+            final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
+            if (transmission != null) {
+                TransmissionControlPacket.Signal signal = packet.getSignal();
+                switch (signal) {
+                    case SENDING_CANCELED:
+
+                        break;
+                    case RECEIVING_CANCELED:
+
+                        break;
+                    case SENDING_COMPLETE:
+                        transmission.onDone();
+                        break;
+                    case RECEIVING_COMPLETE:
+
+                        break;
+                }
+                transmission.closeFile();
+            }
         }
-//        } else if ((header.equals(Headers.SEND_REQUEST))) {
-//            if (!Settings.isAllowReceiving()) {
-//                // TODO: 21.06.2020 make special message if user don't allows to receive files
-//                /*
-//                 * Now requests process as it canceled by user, so sender unable to determine
-//                 * if request really was canceled by user or user don't allows to receive files at all
-//                 * 21.06.2020 huku
-//                 */
-//                processSendRequest(false, TransmissionIn.createDummyTransmission(sender, receivedMessage[1]));
-//            } else {
-//                InRequest request = new InRequest(sender, receivedMessage[0].equals(Headers.TRUE.toString()), receivedMessage[1], receivedMessage[2]);
-//                if (userReady) {
-//                    userReady = false;
-//                    currentInRequest = request;
-//                    onSendRequest(request);
-//                } else {
-//                    inRequests.add(request);
-//                }
-//            }
-//        } else if (header.equals(Headers.SEND_RESPONSE)) {
-//            final TransmissionOut transmission = transmissionsOut.get(receivedMessage[1]);
-//            if (transmission != null) {
-//                if (receivedMessage[0].equals(Headers.TRUE.toString())) {
-//                    onSendResponse(true, transmission);
-//                    Thread transmissionThread = new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            transmission.start();
-//                        }
-//                    });
-//                    transmissionThread.start();
-//                } else {
-//                    onSendResponse(false, transmission);
-//                    transmissionsOut.remove(receivedMessage[1]);
-//                }
-//            }
-//        } else if (header.equals(Headers.MKFILE)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                transmission.createFile(receivedMessage[1]);
-//            }
-//        } else if (header.equals(Headers.MKDIR)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                transmission.createDirectory(receivedMessage[1]);
-//            }
-//        } else if (header.equals(Headers.RAW_DATA)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                //This line allows to write packet data into file and send feedback about operation success
-//                //28.08.2019
-//                int offset = receivedMessage[0].getBytes().length + "\n".length();
-//                transmission.writeToFile(data, offset, length - offset);
-//            }
-//        } else if (header.equals(Headers.CLOSE_FILE)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                transmission.closeFile();
-//            }
-//        } else if (header.equals(Headers.SEND_COMPLETE)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                transmission.onDone();
-//                transmissionsIn.remove(transmission.id);
-//            }
 //        } else if (header.equals(Headers.GZIP_DATA)) {
 //            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
 //            if (transmission != null) {
@@ -202,6 +308,17 @@ public abstract class Sendere {
 //                }
 //            }
 //        }
+        else {
+            sendErrorMessage(sender, flags, RemoteErrorPacket.ErrorType.UNRECOGNIZED_PACKET, anyPacket.getInitializationErrorString());
+        }
+    }
+
+    public boolean sendErrorMessage(RemoteUser user, byte flags, RemoteErrorPacket.ErrorType type) {
+        return sendMessage(user, flags, Any.pack(RemoteErrorPacket.newBuilder().setErrorType(type).build()).toByteArray());
+    }
+
+    public boolean sendErrorMessage(RemoteUser user, byte flags, RemoteErrorPacket.ErrorType type, String errorMessage) {
+        return sendMessage(user, flags, Any.pack(RemoteErrorPacket.newBuilder().setErrorType(type).setExtraMessage(errorMessage).build()).toByteArray());
     }
 
     public Sendere() {
@@ -238,6 +355,8 @@ public abstract class Sendere {
         System.out.println("Порт обнаружения " + discoveryPort);
         startReceiving();
     }
+
+    protected abstract void onRemoteErrorReceived(RemoteUser user, RemoteErrorPacket.ErrorType errorType, String extraMessage);
 
     /**
      * Calls when updated some remote user info (e.g. add new IP address)
@@ -347,7 +466,7 @@ public abstract class Sendere {
                         byte[] byteSUID = Converters.longToBytes(HASH);
                         byte[] byteNickname = Settings.getNickname().getBytes(StandardCharsets.UTF_8);
                         byte[] nicknameLength = new byte[]{(byte) byteNickname.length};
-                        sendMessage(unidentifiedUser, (byte) 0, new byte[]{Headers.PING}, byteSUID, nicknameLength, byteNickname);
+                        sendMessage(unidentifiedUser, (byte) 0, Any.pack(PingPacket.newBuilder().setSuid(HASH).setNickname(Settings.getNickname()).build()).toByteArray());
                     } catch (IOException e) {
 //            if (address[0] == 127)
 //                e.printStackTrace();
@@ -476,6 +595,9 @@ public abstract class Sendere {
         return remoteUser.sendMessage(header, data, length);
     }
 
+    public boolean sendMessage(RemoteUser remoteUser, byte flags, Message packet) {
+        return sendMessage(remoteUser, flags, Any.pack(packet).toByteArray());
+    }
     public boolean sendMessage(RemoteUser remoteUser, byte flags, byte[]... data) {
         return remoteUser.sendMessage(flags, data);
     }
@@ -499,32 +621,45 @@ public abstract class Sendere {
     }*/
 
     public void processSendRequest(boolean allow, TransmissionIn transmission) {
-        // TODO: 11.04.2021 stub
-//        if (allow)
-//            transmissionsIn.put(transmission.id, transmission);
-//        sendMessage(transmission.user, Headers.SEND_RESPONSE, (allow ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id);
-//        if (!inRequests.isEmpty()) {
-//            currentInRequest = inRequests.removeLast();
-//            onSendRequest(currentInRequest);
-//        } else {
-//            userReady = true;
-//        }
+        if (allow)
+            transmissionsIn.put(transmission.id, transmission);
+        sendMessage(transmission.getUser(), (byte) 0, Any.pack(SendResponsePacket.newBuilder().setAccepted(allow)
+                .setTransmissionId(transmission.getId()).build()).toByteArray());
+        if (!inRequests.isEmpty()) {
+            currentInRequest = inRequests.removeLast();
+            onSendRequest(currentInRequest);
+        } else {
+            userReady = true;
+        }
     }
 
     public boolean createRemoteDirectory(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKDIR, transmission.id + "\n" + relativePath);
+        return sendMessage(transmission.user, (byte) 0, CreateDirectoryPacket.newBuilder()
+                .setFileName(relativePath)
+                .setTransmissionId(transmission.getId())
+                .build());
     }
 
     public boolean createRemoteFile(String relativePath, TransmissionOut transmission) {
-        return sendMessage(transmission.user, Headers.MKFILE, transmission.id + "\n" + relativePath);
+        return sendMessage(transmission.user, (byte) 0, CreateFilePacket.newBuilder()
+                .setFileName(relativePath)
+                .setTransmissionId(transmission.getId())
+                .build());
     }
 
     public void addTransmissionOut(TransmissionOut transmission) {
         transmissionsOut.put(transmission.id, transmission);
     }
 
-    public void sendTransmissionRequest(TransmissionOut transmission) {
-        // TODO: 11.04.2021 stub
-        //sendMessage(transmission.user, Headers.SEND_REQUEST, (transmission.isDirectory ? Headers.TRUE : Headers.FALSE) + "\n" + transmission.id + "\n" + transmission.filename);
+    public boolean sendTransmissionRequest(TransmissionOut transmission) {
+        return sendMessage(transmission.getUser(), (byte) 0, Any.pack(SendRequestPacket.newBuilder()
+                .setFileName(transmission.getFilename())
+                .setIsDirectory(transmission.isDirectory())
+                .setTransmissionId(transmission.getId())
+                .build()).toByteArray());
+    }
+
+    public boolean sendTextMessage(RemoteUser user, String message) {
+        return sendMessage(user, (byte) 0, Any.pack(TextPacket.newBuilder().setText(message).build()).toByteArray());
     }
 }

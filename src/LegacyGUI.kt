@@ -1,6 +1,6 @@
 import SendereCommons.*
+import SendereCommons.protopackets.RemoteErrorPacket
 
-import Starter.i
 import java.awt.*
 
 import java.awt.event.ActionEvent
@@ -62,6 +62,10 @@ class LegacyGUI {
 
         NetworkList.updateList()
         sendere = object: Sendere(){
+            override fun onRemoteErrorReceived(user: RemoteUser?, errorType: RemoteErrorPacket.ErrorType?, extraMessage: String?) {
+                TODO("Not yet implemented")
+            }
+
             override fun onRemoteUserUpdated(user: RemoteUser) {
 
             }

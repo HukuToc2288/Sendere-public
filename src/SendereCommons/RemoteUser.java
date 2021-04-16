@@ -1,5 +1,6 @@
 package SendereCommons;
 
+import com.google.protobuf.Any;
 import lombok.Getter;
 
 import java.io.IOException;

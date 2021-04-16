@@ -1,5 +1,6 @@
 package SendereCommons;
 
+@Deprecated
 public class Headers {
 
     // Start for headers supported in all Sendere versions

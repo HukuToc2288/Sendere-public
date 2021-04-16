@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+option java_package = "SendereCommons.protopackets";
+option java_multiple_files = true;
+option java_outer_classname = "PacketProtos";
+
+message PingPacket {
+    int64 suid = 1;
+    string nickname = 2;
+}
+
+
+message PongPacket {
+    int64 suid = 1;
+    string nickname = 2;
+}
+
+message RemoteErrorPacket {
+    ErrorType errorType = 1;
+    optional string extraMessage = 2;
+
+    enum ErrorType {
+        NOT_PROTOBUF = 0;
+        UNRECOGNIZED_PACKET = 1;
+        INVALID_FORMAT = 2;
+        CHAT_NOT_ALLOWED = 3;
+        SEND_NOT_ALLOWED = 4;
+    }
+}
+
+message TextPacket {
+    string text = 1;
+}
+
+message SendRequestPacket {
+    int64 transmissionId = 1;
+    bool isDirectory = 2;
+    string fileName = 3;
+}
+
+message SendResponsePacket {
+    int64 transmissionId = 1;
+    bool accepted = 2;
+}
+
+message CreateFilePacket {
+    int64 transmissionId = 1;
+    string fileName = 2;
+}
+
+message CreateDirectoryPacket {
+    int64 transmissionId = 1;
+    string fileName = 2;
+}
+
+message RawDataPacket {
+    int64 transmissionId = 1;
+    bytes data = 2;
+}
+
+message CloseFilePacket {
+    int64 transmissionId = 1;
+}
+
+message TransmissionControlPacket {
+    int64 transmissionId = 1;
+    Signal signal = 2;
+
+    enum Signal {
+        SENDING_CANCELED = 0;
+        RECEIVING_CANCELED = 1;
+        SENDING_COMPLETE = 2;
+        RECEIVING_COMPLETE = 3;
+    }
+}

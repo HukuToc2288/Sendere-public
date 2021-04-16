@@ -1,21 +1,23 @@
 package SendereCommons;
 
-public abstract class TransmissionIn {
+import lombok.Data;
 
+@Data
+public abstract class TransmissionIn {
 
     public final RemoteUser user;
     public final String rootDir;
-    public final String id;
+    public final long id;
     public long realData = 0 ;
     private String currentRelativePath;
 
-    public TransmissionIn(RemoteUser user, String id, String rootDir){
+    public TransmissionIn(RemoteUser user, long id, String rootDir){
         this.user = user;
         this.rootDir = rootDir;
         this.id = id;
     }
 
-    public TransmissionIn(RemoteUser user, String id){
+    public TransmissionIn(RemoteUser user, long id){
         this.user = user;
         this.rootDir = Settings.getReceivingDir();
         this.id = id;
@@ -29,7 +31,7 @@ public abstract class TransmissionIn {
      * @param id unique id by which transmission can be determined
      * @return transmission with empty methods
      */
-    public static TransmissionIn createDummyTransmission(RemoteUser user, String id){
+    public static TransmissionIn createDummyTransmission(RemoteUser user, long id){
         return new TransmissionIn(user, id) {
             @Override
             public boolean createDirectory(String relativePath) {
