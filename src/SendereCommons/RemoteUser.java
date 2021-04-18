@@ -33,13 +33,13 @@ public abstract class RemoteUser {
         identifyTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if(!identified)
+                if (!identified)
                     onDisconnectInternal();
             }
-        },5000);
+        }, 5000);
     }
 
-    public int getPort(){
+    public int getPort() {
         return socket.getPort();
     }
 
@@ -59,7 +59,7 @@ public abstract class RemoteUser {
             public void run() {
                 sendMessage(Headers.IM_ALIVE);
             }
-        },0, 2000);
+        }, 0, 2000);
     }
 
     private void doReceiving() {
@@ -113,25 +113,24 @@ public abstract class RemoteUser {
     }
 
 
-
-    private void onDisconnectInternal(){
-        if(disconnected)
+    private void onDisconnectInternal() {
+        if (disconnected)
             return;
         disconnected = true;
-        if(isIdentified())
+        if (isIdentified())
             onDisconnect();
     }
 
     protected abstract void onDisconnect();
 
-    boolean sendMessage(Header header){
+    boolean sendMessage(Header header) {
         return sendMessage(header, null, 0);
     }
 
-    boolean sendMessage(Header header, byte[] data, int length){
+    boolean sendMessage(Header header, byte[] data, int length) {
         if (disconnected)
             return false;
-        byte[] byteLength = new byte[]{(byte) ((length&0x00FF0000)>>16), (byte) ((length&0x0000FF00)>>8), (byte) (length&0x000000FF), 47};
+        byte[] byteLength = new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF), 47};
         try {
             //Don't pay attention on "Synchronization on a non-final field" warning
             //output stream never changing even if javac can't understand it
@@ -139,7 +138,8 @@ public abstract class RemoteUser {
             synchronized (out) {
                 out.write(byteLength);
                 out.write(header.getBytes());
-                out.write(data, 0, length);
+                if (data != null)
+                    out.write(data, 0, length);
             }
             return true;
         } catch (SocketException e) {
@@ -164,13 +164,13 @@ public abstract class RemoteUser {
         return hash;
     }
 
-    void identify(String nickname, long hash){
+    void identify(String nickname, long hash) {
         this.nickname = nickname;
         this.hash = hash;
         identified = true;
     }
 
-    private boolean isIdentified(){
+    private boolean isIdentified() {
         return identified;
     }
 
