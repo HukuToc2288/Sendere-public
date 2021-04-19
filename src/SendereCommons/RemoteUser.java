@@ -1,5 +1,9 @@
 package SendereCommons;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -9,6 +13,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public abstract class RemoteUser {
 
@@ -21,6 +27,7 @@ public abstract class RemoteUser {
     private OutputStream out;
     private boolean disconnected = false;
     private long lastAliveTime;
+    private BlockingQueue<SendingQueueElement> sendingQueue = new ArrayBlockingQueue<SendingQueueElement>(5);
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -49,7 +56,33 @@ public abstract class RemoteUser {
         out = socket.getOutputStream();
         lastAliveTime = System.currentTimeMillis();
         doReceiving();
+        doSending();
         doAlive();
+    }
+
+    private void doSending() {
+        final Thread sendingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        SendingQueueElement element = sendingQueue.take();
+                        int length = element.getLength();
+                        out.write(new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)});
+                        out.write(element.getHeader().getBytes());
+                        if (length == 0)
+                            continue;
+                        out.write(element.getData(),0,length);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        onDisconnectInternal();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        sendingThread.start();
     }
 
     private void doAlive() {
@@ -68,7 +101,7 @@ public abstract class RemoteUser {
             public void run() {
                 while (!disconnected) {
                     int read;
-                    byte[] packetLength = new byte[4];
+                    byte[] packetLength = new byte[3];
                     byte[] header = new byte[4];
                     int length;
                     try {
@@ -135,18 +168,10 @@ public abstract class RemoteUser {
             //Don't pay attention on "Synchronization on a non-final field" warning
             //output stream never changing even if javac can't understand it
             //19.09.2019
-            synchronized (out) {
-                out.write(byteLength);
-                out.write(header.getBytes());
-                if (data != null)
-                    out.write(data, 0, length);
-            }
+            sendingQueue.put(new SendingQueueElement(header, length, data));
             return true;
-        } catch (SocketException e) {
-            //e.printStackTrace();
-            onDisconnectInternal();
-        } catch (IOException e) {
-            //e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         return false;
     }
@@ -191,5 +216,14 @@ public abstract class RemoteUser {
     @Override
     public int hashCode() {
         return Objects.hash(nickname, hash);
+    }
+
+
+    @Data
+    @AllArgsConstructor
+    private static class SendingQueueElement {
+        private Header header;
+        private int length;
+        private byte[] data;
     }
 }
