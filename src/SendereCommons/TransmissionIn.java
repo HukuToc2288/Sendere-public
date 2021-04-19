@@ -2,6 +2,8 @@ package SendereCommons;
 
 import lombok.Data;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 @Data
 public abstract class TransmissionIn {
 
@@ -10,18 +12,24 @@ public abstract class TransmissionIn {
     public final long id;
     public long realData = 0 ;
     private String currentRelativePath;
+    private Thread transmissionThread;
 
     public TransmissionIn(RemoteUser user, long id, String rootDir){
         this.user = user;
         this.rootDir = rootDir;
         this.id = id;
+        transmissionThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        });
     }
 
     public TransmissionIn(RemoteUser user, long id){
-        this.user = user;
-        this.rootDir = Settings.getReceivingDir();
-        this.id = id;
+        this(user,id,Settings.getReceivingDir());
     }
+
 
     /**
      * Creates transmission with all methods empty

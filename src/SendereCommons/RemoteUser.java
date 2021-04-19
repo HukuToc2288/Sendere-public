@@ -1,6 +1,7 @@
 package SendereCommons;
 
 import com.google.protobuf.Any;
+import lombok.Data;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -11,6 +12,8 @@ import java.net.SocketException;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public abstract class RemoteUser {
 
@@ -27,6 +30,7 @@ public abstract class RemoteUser {
     private boolean disconnected = false;
     private long lastAliveTime;
     private SimpleNetworkInterface networkInterface;
+    private BlockingQueue<SendingQueueElement> sendingQueue = new ArrayBlockingQueue<SendingQueueElement>(5);
 
     public RemoteUser(String nickname, long hash, Socket socket) throws IOException {
         identify(nickname, hash);
@@ -55,7 +59,34 @@ public abstract class RemoteUser {
         outputStream = socket.getOutputStream();
         lastAliveTime = System.currentTimeMillis();
         doReceiving();
+        doSending();
         doAlive();
+    }
+
+    private void doSending() {
+        final Thread sendingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        SendingQueueElement element = sendingQueue.take();
+                        int length = element.getLength();
+                        outputStream.write(new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)});
+                        outputStream.write(element.flags);
+                        if (length == 0)
+                            continue;
+                        for (byte[] dataPiece : element.getDatas())
+                            outputStream.write(dataPiece);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        onDisconnectInternal();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        sendingThread.start();
     }
 
     private void doAlive() {
@@ -79,8 +110,8 @@ public abstract class RemoteUser {
                     int length;
                     try {
                         while (inputStream.available() < 4 && !disconnected) {
-                            if (System.currentTimeMillis() > lastAliveTime + 5000)
-                                RemoteUser.this.onDisconnectInternal();
+//                            if (System.currentTimeMillis() > lastAliveTime + 5000)
+//                                RemoteUser.this.onDisconnectInternal();
                             Thread.sleep(500);
                         }
                         inputStream.read(packetLength);
@@ -130,36 +161,24 @@ public abstract class RemoteUser {
     boolean sendAlive() {
         // Send headless packet to keep connection
         // 11.04.2021 huku
-        synchronized (outputStream) {
-            if (disconnected)
-                return false;
-            try {
-                synchronized (outputStream) {
-                    // TODO: 11.04.2021 send flags: stub
-                    outputStream.write(0);
-                    outputStream.write(0);
-                    outputStream.write(0);
-                    outputStream.write(0);
-                }
-                return true;
-            } catch (SocketException e) {
-                //e.printStackTrace();
-                onDisconnectInternal();
-            } catch (IOException e) {
-                //e.printStackTrace();
-            }
+        if (disconnected)
             return false;
+        try {
+            // TODO: 11.04.2021 send flags: stub
+            sendingQueue.put(new SendingQueueElement(0, (byte) 0, null));
+            return true;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
+        return false;
     }
 
     /**
-     * @deprecated
-     * go use partial send
-     *
      * @param header
      * @param data
      * @param length
      * @return
+     * @deprecated go use partial send
      */
     @Deprecated
     boolean sendMessage(byte header, byte[] data, int length) {
@@ -171,27 +190,18 @@ public abstract class RemoteUser {
         if (disconnected)
             return false;
         int length = 0;
-        for (byte[] dataPiece: data){
-            length+=dataPiece.length;
+        for (byte[] dataPiece : data) {
+            length += dataPiece.length;
         }
-        byte[] byteLength = new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)};
+        //byte[] byteLength = new byte[]{(byte) ((length & 0x00FF0000) >> 16), (byte) ((length & 0x0000FF00) >> 8), (byte) (length & 0x000000FF)};
         try {
             //Don't pay attention on "Synchronization on a non-final field" warning
             //output stream never changing even if javac can't understand it
             //19.09.2019
-            synchronized (outputStream) {
-                outputStream.write(byteLength);
-                outputStream.write(flags);
-                for (byte[] dataPiece: data){
-                    outputStream.write(dataPiece);
-                }
-            }
+            sendingQueue.put(new SendingQueueElement(length, flags, data));
             return true;
-        } catch (SocketException e) {
-            //e.printStackTrace();
-            onDisconnectInternal();
-        } catch (IOException e) {
-            //e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         return false;
     }
@@ -236,5 +246,18 @@ public abstract class RemoteUser {
     @Override
     public int hashCode() {
         return Objects.hash(nickname, hash);
+    }
+
+    @Data
+    private static class SendingQueueElement {
+        private int length;
+        private byte flags;
+        private byte[][] datas;
+
+        public SendingQueueElement(int length, byte flags, byte[][] datas) {
+            this.length = length;
+            this.flags = flags;
+            this.datas = datas;
+        }
     }
 }

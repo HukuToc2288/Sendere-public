@@ -158,13 +158,9 @@ public class Main {
 
                                 @Override
                                 public boolean writeToFile(byte[] data, int off, int len) {
-                                    try {
-                                        writer.write(data, off, len);
-                                        totalBytesReceived += len - off;
-                                        return true;
-                                    } catch (IOException e) {
-                                        return false;
-                                    }
+                                    //writer.write(data, off, len);
+                                    totalBytesReceived += len - off;
+                                    return true;
                                 }
 
                                 @Override
@@ -314,10 +310,7 @@ public class Main {
                                         FileInputStream in = new FileInputStream(file);
                                         byte[] data = new byte[1024 * 1024 * (Settings.isAllowGzip() ? 4 : 1)];
                                         int dataLength;
-                                        byte[] prefix = (id + "\n").getBytes();
-                                        byte[] gzipPrefix = (id + "\n").getBytes();
                                         while ((dataLength = in.read(data)) != -1) {
-                                            ByteArrayOutputStream outputStream;
                                             // TODO: 16.04.2021 add GZip support, huku
 //                                            if (Settings.isAllowGzip()) {
 //                                                byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
@@ -338,16 +331,10 @@ public class Main {
 //                                                    outputStream.close();
 //                                                }
 //                                            } else {
-                                            outputStream = new ByteArrayOutputStream();
-                                            outputStream.write(prefix);
-                                            outputStream.write(data);
                                             sendere.sendMessage(user, (byte) 0, RawDataPacket.newBuilder()
                                                     .setTransmissionId(this.getId())
                                                     .setData(ByteString.copyFrom(data, 0, dataLength))
                                                     .build());
-                                            //sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
-                                            outputStream.close();
-                                            //}
                                             if (stop)
                                                 return;
                                         }
