@@ -9,12 +9,14 @@ import com.google.protobuf.ByteString;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.zip.Deflater;
 
 public class Main {
 
     private Sendere sendere;
     private Scanner scanner;
     private boolean question = false;
+    private boolean authenticationQuestion = false;
     private boolean allow = false;
     private InRequest tempInRequest;
     private HashSet<String> blacklistIPs = new HashSet<String>();
@@ -33,6 +35,12 @@ public class Main {
         }
         println("Инициализация сервиса...");
         sendere = new Sendere() {
+
+            @Override
+            protected void onAuthenticationRequestReceived(long secret) {
+
+            }
+
             @Override
             protected void onRemoteErrorReceived(RemoteUser user, RemoteErrorPacket.ErrorType errorType, String extraMessage) {
                 String errorDescription = null;
@@ -158,7 +166,12 @@ public class Main {
 
                                 @Override
                                 public boolean writeToFile(byte[] data, int off, int len) {
-                                    //writer.write(data, off, len);
+                                    try {
+                                        writer.write(data, off, len);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                        return false;
+                                    }
                                     totalBytesReceived += len - off;
                                     return true;
                                 }
@@ -246,7 +259,8 @@ public class Main {
                         long endTime = System.currentTimeMillis() + testDuration * 1000;
                         int packetsSend = 0;
                         while (System.currentTimeMillis() < endTime) {
-                            sendere.sendMessage(tempUser, Headers.SPEED_MEASURE, new byte[1048572], 1048572);
+                            sendere.sendMessage(tempUser, (byte)4, RawDataPacket.newBuilder().setTransmissionId(0)
+                                    .setData(ByteString.copyFrom(new byte[1048572])).build());
                             packetsSend++;
                         }
                         println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", (float) packetsSend / testDuration));
@@ -270,8 +284,11 @@ public class Main {
                         //Надо переделать расчёт номера передачи
                         TransmissionOut transmission = new TransmissionOut(tempUser, new File(split[2]).isDirectory(), split[2]) {
 
+                            private Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION,true);
+
                             @Override
                             public void start() {
+                                deflater.setStrategy(Deflater.HUFFMAN_ONLY);
                                 recursiveSend(filename);
                                 sendere.sendMessage(user, (byte) 0, TransmissionControlPacket.newBuilder()
                                         .setSignal(TransmissionControlPacket.Signal.SENDING_COMPLETE)
@@ -308,30 +325,15 @@ public class Main {
                                     try {
                                         sendere.createRemoteFile(currentRelativePath, this);
                                         FileInputStream in = new FileInputStream(file);
-                                        byte[] data = new byte[1024 * 1024 * (Settings.isAllowGzip() ? 4 : 1)];
+                                        byte[] data = new byte[1024 * 1024/8];
                                         int dataLength;
+                                        byte flags = 0;
                                         while ((dataLength = in.read(data)) != -1) {
                                             // TODO: 16.04.2021 add GZip support, huku
-//                                            if (Settings.isAllowGzip()) {
-//                                                byte[][] gdatas = GzipUtils.doMulticoreGZip(data, dataLength);
-//                                                for (int i = 0; i < gdatas.length; i++) {
-//                                                    outputStream = new ByteArrayOutputStream();
-//                                                    if (gdatas[i].length < dataLength) {
-//                                                        outputStream.write(gzipPrefix);
-//                                                        outputStream.write(gdatas[i]);
-//                                                        sendere.sendMessage(user, Headers.GZIP_DATA, outputStream.toByteArray(), gdatas[i].length + gzipPrefix.length);
-//                                                    } else {
-//                                                        //If we don't managed to make compressed block size lower than original
-//                                                        //20.06.2020 huku
-//                                                        outputStream = new ByteArrayOutputStream();
-//                                                        outputStream.write(prefix);
-//                                                        outputStream.write(data);
-//                                                        sendere.sendMessage(user, Headers.RAW_DATA, outputStream.toByteArray(), prefix.length + dataLength);
-//                                                    }
-//                                                    outputStream.close();
-//                                                }
-//                                            } else {
-                                            sendere.sendMessage(user, (byte) 0, RawDataPacket.newBuilder()
+                                            if (Settings.isAllowGzip()) {
+                                                flags+=1;
+                                            }
+                                            sendere.sendMessage(user, flags, RawDataPacket.newBuilder()
                                                     .setTransmissionId(this.getId())
                                                     .setData(ByteString.copyFrom(data, 0, dataLength))
                                                     .build());

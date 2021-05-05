@@ -7,12 +7,16 @@ option java_outer_classname = "PacketProtos";
 message PingPacket {
     int64 suid = 1;
     string nickname = 2;
+    bool supportGzip = 3;
+    bool supportEncryption = 4;
 }
 
 
 message PongPacket {
     int64 suid = 1;
     string nickname = 2;
+    bool supportGzip = 3;
+    bool supportEncryption = 4;
 }
 
 message RemoteErrorPacket {
@@ -73,3 +77,17 @@ message TransmissionControlPacket {
         RECEIVING_COMPLETE = 3;
     }
 }
+
+
+
+message AuthenticationStage1Packet {
+    bytes publicKey = 1;
+    bytes encryptedSecret = 2;
+    int64 secret = 3;
+}
+
+message AuthenticationStage2Packet {
+    bytes publicKey = 1;
+    bytes encryptedSecret = 2;
+}
+

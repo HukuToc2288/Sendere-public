@@ -2,6 +2,8 @@ package SendereCommons;
 
 import lombok.Data;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Data
@@ -13,6 +15,7 @@ public abstract class TransmissionIn {
     public long realData = 0 ;
     private String currentRelativePath;
     private Thread transmissionThread;
+    private BlockingQueue<Runnable> transmissionQueue = new ArrayBlockingQueue<>(1);
 
     public TransmissionIn(RemoteUser user, long id, String rootDir){
         this.user = user;
@@ -21,9 +24,17 @@ public abstract class TransmissionIn {
         transmissionThread = new Thread(new Runnable() {
             @Override
             public void run() {
-
+                try {
+                    while (true) {
+                        transmissionQueue.take().run();
+                    }
+                }catch (InterruptedException e){
+                    e.printStackTrace();
+                    return;
+                }
             }
         });
+        transmissionThread.start();
     }
 
     public TransmissionIn(RemoteUser user, long id){
@@ -120,5 +131,13 @@ public abstract class TransmissionIn {
 
     public void writeToFile(byte[] data){
         writeToFile(data, 0, data.length);
+    }
+
+    public void postToTransmissionThread(Runnable runnable){
+        try {
+            transmissionQueue.put(runnable);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -69,6 +69,16 @@ public final class PacketProtos {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_TransmissionControlPacket_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_AuthenticationStage1Packet_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_AuthenticationStage1Packet_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_AuthenticationStage2Packet_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_AuthenticationStage2Packet_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -78,32 +88,38 @@ public final class PacketProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\021ping-packet.proto\",\n\nPingPacket\022\014\n\004sui" +
-      "d\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\",\n\nPongPacket\022" +
-      "\014\n\004suid\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\"\350\001\n\021Remo" +
-      "teErrorPacket\022/\n\terrorType\030\001 \001(\0162\034.Remot" +
-      "eErrorPacket.ErrorType\022\031\n\014extraMessage\030\002" +
-      " \001(\tH\000\210\001\001\"v\n\tErrorType\022\020\n\014NOT_PROTOBUF\020\000" +
-      "\022\027\n\023UNRECOGNIZED_PACKET\020\001\022\022\n\016INVALID_FOR" +
-      "MAT\020\002\022\024\n\020CHAT_NOT_ALLOWED\020\003\022\024\n\020SEND_NOT_" +
-      "ALLOWED\020\004B\017\n\r_extraMessage\"\032\n\nTextPacket" +
-      "\022\014\n\004text\030\001 \001(\t\"R\n\021SendRequestPacket\022\026\n\016t" +
-      "ransmissionId\030\001 \001(\003\022\023\n\013isDirectory\030\002 \001(\010" +
-      "\022\020\n\010fileName\030\003 \001(\t\">\n\022SendResponsePacket" +
-      "\022\026\n\016transmissionId\030\001 \001(\003\022\020\n\010accepted\030\002 \001" +
-      "(\010\"<\n\020CreateFilePacket\022\026\n\016transmissionId" +
-      "\030\001 \001(\003\022\020\n\010fileName\030\002 \001(\t\"A\n\025CreateDirect" +
-      "oryPacket\022\026\n\016transmissionId\030\001 \001(\003\022\020\n\010fil" +
-      "eName\030\002 \001(\t\"5\n\rRawDataPacket\022\026\n\016transmis" +
-      "sionId\030\001 \001(\003\022\014\n\004data\030\002 \001(\014\")\n\017CloseFileP" +
-      "acket\022\026\n\016transmissionId\030\001 \001(\003\"\314\001\n\031Transm" +
-      "issionControlPacket\022\026\n\016transmissionId\030\001 " +
-      "\001(\003\0221\n\006signal\030\002 \001(\0162!.TransmissionContro" +
-      "lPacket.Signal\"d\n\006Signal\022\024\n\020SENDING_CANC" +
-      "ELED\020\000\022\026\n\022RECEIVING_CANCELED\020\001\022\024\n\020SENDIN" +
-      "G_COMPLETE\020\002\022\026\n\022RECEIVING_COMPLETE\020\003B-\n\033" +
-      "SendereCommons.protopacketsB\014PacketProto" +
-      "sP\001b\006proto3"
+      "\n\021ping-packet.proto\"\\\n\nPingPacket\022\014\n\004sui" +
+      "d\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022\023\n\013supportGzip" +
+      "\030\003 \001(\010\022\031\n\021supportEncryption\030\004 \001(\010\"\\\n\nPon" +
+      "gPacket\022\014\n\004suid\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022" +
+      "\023\n\013supportGzip\030\003 \001(\010\022\031\n\021supportEncryptio" +
+      "n\030\004 \001(\010\"\350\001\n\021RemoteErrorPacket\022/\n\terrorTy" +
+      "pe\030\001 \001(\0162\034.RemoteErrorPacket.ErrorType\022\031" +
+      "\n\014extraMessage\030\002 \001(\tH\000\210\001\001\"v\n\tErrorType\022\020" +
+      "\n\014NOT_PROTOBUF\020\000\022\027\n\023UNRECOGNIZED_PACKET\020" +
+      "\001\022\022\n\016INVALID_FORMAT\020\002\022\024\n\020CHAT_NOT_ALLOWE" +
+      "D\020\003\022\024\n\020SEND_NOT_ALLOWED\020\004B\017\n\r_extraMessa" +
+      "ge\"\032\n\nTextPacket\022\014\n\004text\030\001 \001(\t\"R\n\021SendRe" +
+      "questPacket\022\026\n\016transmissionId\030\001 \001(\003\022\023\n\013i" +
+      "sDirectory\030\002 \001(\010\022\020\n\010fileName\030\003 \001(\t\">\n\022Se" +
+      "ndResponsePacket\022\026\n\016transmissionId\030\001 \001(\003" +
+      "\022\020\n\010accepted\030\002 \001(\010\"<\n\020CreateFilePacket\022\026" +
+      "\n\016transmissionId\030\001 \001(\003\022\020\n\010fileName\030\002 \001(\t" +
+      "\"A\n\025CreateDirectoryPacket\022\026\n\016transmissio" +
+      "nId\030\001 \001(\003\022\020\n\010fileName\030\002 \001(\t\"5\n\rRawDataPa" +
+      "cket\022\026\n\016transmissionId\030\001 \001(\003\022\014\n\004data\030\002 \001" +
+      "(\014\")\n\017CloseFilePacket\022\026\n\016transmissionId\030" +
+      "\001 \001(\003\"\314\001\n\031TransmissionControlPacket\022\026\n\016t" +
+      "ransmissionId\030\001 \001(\003\0221\n\006signal\030\002 \001(\0162!.Tr" +
+      "ansmissionControlPacket.Signal\"d\n\006Signal" +
+      "\022\024\n\020SENDING_CANCELED\020\000\022\026\n\022RECEIVING_CANC" +
+      "ELED\020\001\022\024\n\020SENDING_COMPLETE\020\002\022\026\n\022RECEIVIN" +
+      "G_COMPLETE\020\003\"X\n\032AuthenticationStage1Pack" +
+      "et\022\021\n\tpublicKey\030\001 \001(\014\022\027\n\017encryptedSecret" +
+      "\030\002 \001(\014\022\016\n\006secret\030\003 \001(\003\"H\n\032Authentication" +
+      "Stage2Packet\022\021\n\tpublicKey\030\001 \001(\014\022\027\n\017encry" +
+      "ptedSecret\030\002 \001(\014B-\n\033SendereCommons.proto" +
+      "packetsB\014PacketProtosP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -114,13 +130,13 @@ public final class PacketProtos {
     internal_static_PingPacket_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_PingPacket_descriptor,
-        new java.lang.String[] { "Suid", "Nickname", });
+        new java.lang.String[] { "Suid", "Nickname", "SupportGzip", "SupportEncryption", });
     internal_static_PongPacket_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_PongPacket_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_PongPacket_descriptor,
-        new java.lang.String[] { "Suid", "Nickname", });
+        new java.lang.String[] { "Suid", "Nickname", "SupportGzip", "SupportEncryption", });
     internal_static_RemoteErrorPacket_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_RemoteErrorPacket_fieldAccessorTable = new
@@ -175,6 +191,18 @@ public final class PacketProtos {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_TransmissionControlPacket_descriptor,
         new java.lang.String[] { "TransmissionId", "Signal", });
+    internal_static_AuthenticationStage1Packet_descriptor =
+      getDescriptor().getMessageTypes().get(11);
+    internal_static_AuthenticationStage1Packet_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_AuthenticationStage1Packet_descriptor,
+        new java.lang.String[] { "PublicKey", "EncryptedSecret", "Secret", });
+    internal_static_AuthenticationStage2Packet_descriptor =
+      getDescriptor().getMessageTypes().get(12);
+    internal_static_AuthenticationStage2Packet_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_AuthenticationStage2Packet_descriptor,
+        new java.lang.String[] { "PublicKey", "EncryptedSecret", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

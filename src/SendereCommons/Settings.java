@@ -42,7 +42,7 @@ public class Settings {
      */
     @Getter
     @Setter
-    private static boolean allowChat = false;
+    private static boolean allowChat = true;
 
     /**
      * Show that user allows to receive files and directories

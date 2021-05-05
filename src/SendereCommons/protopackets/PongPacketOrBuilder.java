@@ -24,4 +24,16 @@ public interface PongPacketOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNicknameBytes();
+
+  /**
+   * <code>bool supportGzip = 3;</code>
+   * @return The supportGzip.
+   */
+  boolean getSupportGzip();
+
+  /**
+   * <code>bool supportEncryption = 4;</code>
+   * @return The supportEncryption.
+   */
+  boolean getSupportEncryption();
 }

@@ -3,22 +3,33 @@ package SendereCommons;
 import SendereCommons.protopackets.*;
 
 import com.google.protobuf.Any;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.sun.xml.internal.bind.v2.TODO;
+import kotlin.UByte;
 import lombok.Setter;
 import lombok.SneakyThrows;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 public abstract class Sendere {
 
@@ -69,6 +80,8 @@ public abstract class Sendere {
     private boolean allowReceiving = true;
     private boolean userReady = true;
 
+    public static final byte DEFAULT_FLAGS = 0;
+
     private RemoteUserList remoteUsers;
     private HashMap<Long, TransmissionIn> transmissionsIn = new HashMap<Long, TransmissionIn>();
     private HashMap<Long, TransmissionOut> transmissionsOut = new HashMap<Long, TransmissionOut>();
@@ -78,13 +91,21 @@ public abstract class Sendere {
 
     private HashSet<ArpEntry> addressesToPing = new HashSet<ArpEntry>();
 
+    Inflater inflater = new Inflater();
+    Deflater deflater = new Deflater(9);
+
+    private KeyPair rsaKeyPair;
+    private byte[] encryptedSecret;
+
     private void onReceive(RemoteUser sender, byte flags, byte[] data) {
         // empty packet
         if (data.length == 0)
             return;
         // TODO: 11.04.2021 stub
-        if (flags != 0)
-            return;
+        int compressedDataLength = data.length;
+        if ((flags & 1) != 0){
+            data = inflate(data);
+        }
         Any anyPacket;
         try {
             anyPacket = Any.parseFrom(data);
@@ -251,6 +272,7 @@ public abstract class Sendere {
             }
             final TransmissionIn transmission = transmissionsIn.get(packet.getTransmissionId());
             if (transmission != null) {
+                transmission.realData+=compressedDataLength;
                 transmission.writeToFile(packet.getData().toByteArray());
             }
         } else if (anyPacket.is(CloseFilePacket.class)) {
@@ -290,27 +312,73 @@ public abstract class Sendere {
 
                         break;
                 }
-                transmission.closeFile();
             }
-        }
-//        } else if (header.equals(Headers.GZIP_DATA)) {
-//            TransmissionIn transmission = transmissionsIn.get(receivedMessage[0]);
-//            if (transmission != null) {
-//                //This line allows to write packet data into file and send feedback about operation success
-//                //28.08.2019
-//                try {
-//                    int offset = receivedMessage[0].getBytes().length + "\n".length();
-//                    transmission.realData += length - offset;
-//                    transmission.writeToFile(GzipUtils.unzip(data, offset, length - offset));
-//                } catch (IOException e) {
-//                    //fail
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-        else {
+        } else if (anyPacket.is(AuthenticationStage1Packet.class)) {
+            AuthenticationStage1Packet packet;
+            try {
+                packet = anyPacket.unpack(AuthenticationStage1Packet.class);
+            } catch (InvalidProtocolBufferException e) {
+                sendErrorMessage(sender, (byte) 0, RemoteErrorPacket.ErrorType.INVALID_FORMAT, AuthenticationStage1Packet.class.getSimpleName());
+                return;
+            }
+            byte[] remoteEncryptedSecret = packet.getEncryptedSecret().toByteArray();
+            boolean authStage1Passed = sender.doAuthenticationStage1(packet.getSecret(),remoteEncryptedSecret,packet.getPublicKey().toByteArray());
+            if (authStage1Passed) {
+                try {
+                    CRC32 crc32 = new CRC32();
+                    for (byte b: encryptedSecret){
+                        crc32.update(b);
+                    }
+                    for (byte b: remoteEncryptedSecret){
+                        crc32.update(b);
+                    }
+                    sendMessage(sender,AuthenticationStage2Packet.newBuilder()
+                            .setEncryptedSecret(ByteString.copyFrom(encryptedSecret))
+                            .setPublicKey(ByteString.copyFrom(rsaKeyPair.getPublic().getEncoded()))
+                    .build());
+                    onAuthenticationRequestReceived(crc32.getValue());
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        } else {
             sendErrorMessage(sender, flags, RemoteErrorPacket.ErrorType.UNRECOGNIZED_PACKET, anyPacket.getInitializationErrorString());
         }
+    }
+
+    protected abstract void onAuthenticationRequestReceived(long secret);
+
+
+    @SneakyThrows
+    private byte[] inflate(byte[] data) {
+        byte[] inflaterBuffer = new byte[1024*1024];
+        inflater.setInput(data);
+        int length = inflater.inflate(inflaterBuffer);
+        byte[] inflated = new byte[length];
+        System.arraycopy(inflaterBuffer,0,inflated,0, length);
+        inflater.reset();
+        return inflated;
+    }
+
+    private byte[] deflate(byte[] data){
+        byte[] deflaterBuffer = new byte[1024*1024];
+        deflater.reset();
+        deflater.setInput(data);
+        deflater.finish();
+        int length=0;
+        while (!deflater.finished()) {
+            length += deflater.deflate(deflaterBuffer);
+        }
+        if (length==0){
+            int a = 0;
+            deflater.reset();
+            deflater.setInput(data);
+            deflater.finish();
+            length = deflater.deflate(deflaterBuffer);
+        }
+        byte[] deflated = new byte[length];
+        System.arraycopy(deflaterBuffer,0,deflated,0, length);
+        return deflated;
     }
 
     public boolean sendErrorMessage(RemoteUser user, byte flags, RemoteErrorPacket.ErrorType type) {
@@ -353,6 +421,17 @@ public abstract class Sendere {
 
         HASH = ThreadLocalRandom.current().nextLong();
         System.out.println("Порт обнаружения " + discoveryPort);
+        deflater.setStrategy(Deflater.HUFFMAN_ONLY);
+        KeyPairGenerator keyPairGenerator = null;
+        try {
+            keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            rsaKeyPair = keyPairGenerator.generateKeyPair();
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, rsaKeyPair.getPrivate());
+            encryptedSecret = cipher.doFinal(Converters.longToBytes(HASH));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         startReceiving();
     }
 
@@ -596,8 +675,22 @@ public abstract class Sendere {
     }
 
     public boolean sendMessage(RemoteUser remoteUser, byte flags, Message packet) {
-        return sendMessage(remoteUser, flags, Any.pack(packet).toByteArray());
+        byte[] anyBytes = Any.pack(packet).toByteArray();
+        if ((flags & 1) != 0){
+            byte[] deflated = deflate(anyBytes);
+            if (deflated.length < anyBytes.length){
+                anyBytes = deflated;
+            } else {
+                flags = 0;
+            }
+        }
+        return sendMessage(remoteUser, flags, anyBytes);
     }
+
+    public boolean sendMessage(RemoteUser remoteUser, Message message) {
+        return sendMessage(remoteUser, DEFAULT_FLAGS, message);
+    }
+
     public boolean sendMessage(RemoteUser remoteUser, byte flags, byte[]... data) {
         return remoteUser.sendMessage(flags, data);
     }
@@ -661,5 +754,45 @@ public abstract class Sendere {
 
     public boolean sendTextMessage(RemoteUser user, String message) {
         return sendMessage(user, (byte) 0, Any.pack(TextPacket.newBuilder().setText(message).build()).toByteArray());
+    }
+
+    public boolean requestAuthentication(RemoteUser user){
+        Cipher cipher;
+        try {
+            cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, rsaKeyPair.getPublic());
+            AuthenticationStage1Packet packet = AuthenticationStage1Packet.newBuilder()
+                    .setSecret(HASH)
+                    .setPublicKey(ByteString.copyFrom(rsaKeyPair.getPublic().getEncoded()))
+                    .setEncryptedSecret(ByteString.copyFrom(cipher.doFinal(Converters.longToBytes(HASH))))
+                    .build();
+            sendMessage(user,packet);
+        } catch (Exception e){
+            return false;
+        }
+        return true;
+    }
+
+
+    public static long decrypt(byte[] data, PublicKey publicKey)
+            throws InvalidKeyException,
+            NoSuchPaddingException,
+            NoSuchAlgorithmException,
+            BadPaddingException,
+            IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, publicKey);
+        return Converters.bytesToLong(cipher.doFinal(data));
+    }
+
+    public static byte[] encrypt(long secret, PublicKey publicKey)
+            throws InvalidKeyException,
+            NoSuchPaddingException,
+            NoSuchAlgorithmException,
+            BadPaddingException,
+            IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        return cipher.doFinal(Converters.longToBytes(secret));
     }
 }
