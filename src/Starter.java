@@ -1,20 +1,9 @@
-import SendereCommons.OSUtils;
-import SendereCommons.OSUtilsKt;
-import SendereCommons.RSATest;
-import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+import testificate.LegacyGUI;
 
-import javax.swing.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Logger;
 import java.util.zip.Deflater;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 public class Starter {
 
@@ -33,7 +22,7 @@ public class Starter {
     static final Object changeMessageLock = new Object();
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        new Main().main(args);
+        new LegacyGUI().init();
 //        File file = new File("/home/huku/Downloads/terraria_english_v1_4_1_2_42620.sh");
 //        FileInputStream fis = new FileInputStream(file);
 //        byte[] data = new byte[(int) file.length()];

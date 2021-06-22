@@ -1,8 +1,20 @@
 syntax = "proto3";
 
-option java_package = "SendereCommons.protopackets";
+option java_package = "sendereCommons.protopackets";
 option java_multiple_files = true;
 option java_outer_classname = "PacketProtos";
+
+message DiscoveryPacket {
+    int64 suid = 1;
+    bytes address = 2;
+    int32 port = 3;
+}
+
+message IdentificationPacket {
+    string nickname = 1;
+    bool remoteIdentified = 2;
+    bool supprotEnctryption = 3;
+}
 
 message PingPacket {
     int64 suid = 1;
@@ -47,6 +59,19 @@ message SendResponsePacket {
     bool accepted = 2;
 }
 
+
+message TransmissionControlPacket {
+    int64 transmissionId = 1;
+    Signal signal = 2;
+
+    enum Signal {
+        SENDING_CANCELED = 0;
+        RECEIVING_CANCELED = 1;
+        SENDING_COMPLETE = 2;
+        RECEIVING_COMPLETE = 3;
+    }
+}
+
 message CreateFilePacket {
     int64 transmissionId = 1;
     string fileName = 2;
@@ -78,16 +103,20 @@ message TransmissionControlPacket {
     }
 }
 
-
-
 message AuthenticationStage1Packet {
-    bytes publicKey = 1;
-    bytes encryptedSecret = 2;
-    int64 secret = 3;
+    bytes UUID = 1;
+    bytes publicKey = 2;
+    bytes encryptedSecret = 3;
+    int64 secret = 4;
 }
 
 message AuthenticationStage2Packet {
-    bytes publicKey = 1;
-    bytes encryptedSecret = 2;
+    bytes UUID = 1;
+    bytes publicKey = 2;
+    bytes encryptedSecret = 3;
+}
+
+message AuthenticationConfirmPacket {
+    bool authConfirmed = 1;
 }
 
