@@ -22,7 +22,7 @@ public class Starter {
     static final Object changeMessageLock = new Object();
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        new LegacyGUI().init();
+        new Main().main(args);
 //        File file = new File("/home/huku/Downloads/terraria_english_v1_4_1_2_42620.sh");
 //        FileInputStream fis = new FileInputStream(file);
 //        byte[] data = new byte[(int) file.length()];

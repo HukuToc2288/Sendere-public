@@ -1,28 +1,29 @@
 package sendereCommons
 
-import sendereCommons.Settings.nickname
-import sendereCommons.Settings.visibility
-import sendereCommons.protopackets.*
 import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.Message
 import lombok.SneakyThrows
+import sendereCommons.Settings.nickname
+import sendereCommons.Settings.visibility
+import sendereCommons.protopackets.*
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.*
 import java.nio.charset.StandardCharsets
 import java.security.*
+import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
-import java.util.zip.CRC32
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.IllegalBlockSizeException
 import javax.crypto.NoSuchPaddingException
+import javax.crypto.interfaces.DHPublicKey
 import kotlin.experimental.and
 
 abstract class Sendere {
@@ -64,12 +65,8 @@ abstract class Sendere {
         const val MINOR_VERSION = 1
         const val VERSION = MAJOR_VERSION shl 16 + MIDDLE_VERSION shl 8 + MINOR_VERSION
 
-        /**
-         * Size in bytes of oncoming and incoming messages that should be used instead of
-         * hardcoded value.
-         */
-        const val PACKET_LENGTH = 1024 * 33
         const val DEFAULT_FLAGS: Byte = 0
+
         @JvmStatic
         @Throws(InvalidKeyException::class, NoSuchPaddingException::class, NoSuchAlgorithmException::class, BadPaddingException::class, IllegalBlockSizeException::class)
         fun decrypt(data: ByteArray?, publicKey: PublicKey?): Long {
@@ -87,10 +84,7 @@ abstract class Sendere {
     }
 
     var mainPort = 0
-    private var discoveryPort = 0
     private var serverSocket: ServerSocket? = null
-    var discoverySocket: MulticastSocket? = null
-    private val receiverThread: Thread? = null
     private val allowReceiving = true
     private var userReady = true
     val remoteUsers: RemoteUserList = RemoteUserList()
@@ -98,7 +92,6 @@ abstract class Sendere {
     private val transmissionsOut = HashMap<Long, TransmissionOut>()
     private val inRequests = LinkedList<InRequest>()
     private var currentInRequest: InRequest? = null
-    private val addressesToPing = HashSet<ArpEntry>()
     var inflater = Inflater()
     var deflater = Deflater(9)
     private lateinit var rsaKeyPair: KeyPair
@@ -120,7 +113,7 @@ abstract class Sendere {
             return
         }
         if (anyPacket.`is`(PingPacket::class.java)) {
-            var packet: PingPacket = try {
+            val packet: PingPacket = try {
                 anyPacket.unpack(PingPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, PingPacket::class.java.simpleName)
@@ -146,8 +139,7 @@ abstract class Sendere {
                 }
             }
         } else if (anyPacket.`is`(PongPacket::class.java)) {
-            val packet: PongPacket
-            packet = try {
+            val packet: PongPacket = try {
                 anyPacket.unpack(PongPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, PongPacket::class.java.simpleName)
@@ -167,6 +159,7 @@ abstract class Sendere {
                 sender.identify(remoteNick, remoteSUID)
                 remoteUsers.put(sender)
                 onRemoteUserFound(sender)
+                startDiffieHellman(sender)
             }
         } else if (anyPacket.`is`(RemoteErrorPacket::class.java)) {
             val packet: RemoteErrorPacket = try {
@@ -179,8 +172,7 @@ abstract class Sendere {
             }
             onRemoteErrorReceived(sender, packet.errorType, packet.extraMessage)
         } else if (anyPacket.`is`(TextPacket::class.java)) {
-            val packet: TextPacket
-            packet = try {
+            val packet: TextPacket = try {
                 anyPacket.unpack(TextPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, TextPacket::class.java.simpleName)
@@ -192,8 +184,7 @@ abstract class Sendere {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.CHAT_NOT_ALLOWED)
             }
         } else if (anyPacket.`is`(SendRequestPacket::class.java)) {
-            val packet: SendRequestPacket
-            packet = try {
+            val packet: SendRequestPacket = try {
                 anyPacket.unpack(SendRequestPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, SendRequestPacket::class.java.simpleName)
@@ -218,8 +209,7 @@ abstract class Sendere {
                 }
             }
         } else if (anyPacket.`is`(SendResponsePacket::class.java)) {
-            val packet: SendResponsePacket
-            packet = try {
+            val packet: SendResponsePacket = try {
                 anyPacket.unpack(SendResponsePacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, SendResponsePacket::class.java.simpleName)
@@ -237,8 +227,7 @@ abstract class Sendere {
                 }
             }
         } else if (anyPacket.`is`(CreateFilePacket::class.java)) {
-            val packet: CreateFilePacket
-            packet = try {
+            val packet: CreateFilePacket = try {
                 anyPacket.unpack(CreateFilePacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, CreateFilePacket::class.java.simpleName)
@@ -247,8 +236,7 @@ abstract class Sendere {
             val transmission = transmissionsIn[packet.transmissionId]
             transmission?.createFile(packet.fileName)
         } else if (anyPacket.`is`(CreateDirectoryPacket::class.java)) {
-            val packet: CreateDirectoryPacket
-            packet = try {
+            val packet: CreateDirectoryPacket = try {
                 anyPacket.unpack(CreateDirectoryPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, CreateDirectoryPacket::class.java.simpleName)
@@ -257,8 +245,7 @@ abstract class Sendere {
             val transmission = transmissionsIn[packet.transmissionId]
             transmission?.createDirectory(packet.fileName)
         } else if (anyPacket.`is`(RawDataPacket::class.java)) {
-            val packet: RawDataPacket
-            packet = try {
+            val packet: RawDataPacket = try {
                 anyPacket.unpack(RawDataPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, RawDataPacket::class.java.simpleName)
@@ -270,8 +257,7 @@ abstract class Sendere {
                 transmission.writeToFile(packet.data.toByteArray())
             }
         } else if (anyPacket.`is`(CloseFilePacket::class.java)) {
-            val packet: CloseFilePacket
-            packet = try {
+            val packet: CloseFilePacket = try {
                 anyPacket.unpack(CloseFilePacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, CloseFilePacket::class.java.simpleName)
@@ -280,8 +266,7 @@ abstract class Sendere {
             val transmission = transmissionsIn[packet.transmissionId]
             transmission?.closeFile()
         } else if (anyPacket.`is`(TransmissionControlPacket::class.java)) {
-            val packet: TransmissionControlPacket
-            packet = try {
+            val packet: TransmissionControlPacket = try {
                 anyPacket.unpack(TransmissionControlPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, TransmissionControlPacket::class.java.simpleName)
@@ -289,8 +274,7 @@ abstract class Sendere {
             }
             val transmission = transmissionsIn[packet.transmissionId]
             if (transmission != null) {
-                val signal = packet.signal
-                when (signal) {
+                when (packet.signal) {
                     TransmissionControlPacket.Signal.SENDING_CANCELED -> {
                     }
                     TransmissionControlPacket.Signal.RECEIVING_CANCELED -> {
@@ -298,35 +282,91 @@ abstract class Sendere {
                     TransmissionControlPacket.Signal.SENDING_COMPLETE -> transmission.onDone()
                     TransmissionControlPacket.Signal.RECEIVING_COMPLETE -> {
                     }
+                    else -> {
+                        // TODO: 26.06.2021 huku unknown signal
+                    }
                 }
             }
-        } else if (anyPacket.`is`(AuthenticationStage1Packet::class.java)) {
-            val packet: AuthenticationStage1Packet
-            packet = try {
-                anyPacket.unpack(AuthenticationStage1Packet::class.java)
+        } else if (anyPacket.`is`(DiffieHellmanPacket::class.java)) {
+
+            val packet = try {
+                anyPacket.unpack(DiffieHellmanPacket::class.java)
             } catch (e: InvalidProtocolBufferException) {
-                sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, AuthenticationStage1Packet::class.java.simpleName)
+                sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, DiffieHellmanPacket::class.java.simpleName)
                 return
             }
-            val remoteEncryptedSecret = packet.encryptedSecret.toByteArray()
-            val authStage1Passed = sender.doAuthenticationStage1(packet.secret, remoteEncryptedSecret, packet.publicKey.toByteArray())
-            if (authStage1Passed) {
-                try {
-                    val crc32 = CRC32()
-                    for (b in encryptedSecret!!) {
-                        crc32.update(b.toInt())
-                    }
-                    for (b in remoteEncryptedSecret) {
-                        crc32.update(b.toInt())
-                    }
-                    sendMessage(sender, AuthenticationStage2Packet.newBuilder()
-                            .setEncryptedSecret(ByteString.copyFrom(encryptedSecret))
-                            .setPublicKey(ByteString.copyFrom(rsaKeyPair.public.encoded))
-                            .build())
-                    onAuthenticationRequestReceived(crc32.value)
-                } catch (e: Exception) {
-                    e.printStackTrace()
+
+            val encodedKey = packet.encodedPublicKey.toByteArray()
+            val senderGeneratedSecret = packet.senderGeneratedSecret
+
+            if (!senderGeneratedSecret) {
+
+                // отправка публичного ключа Алисы Бобу
+
+                /*
+                 * Let's turn over to Bob. Bob has received Alice's public key
+                 * in encoded format.
+                 * He instantiates a DH public key from the encoded key material.
+                 */
+                val bobKeyFac = KeyFactory.getInstance("DH")
+                val x509KeySpec = X509EncodedKeySpec(encodedKey)
+
+                val alicePubKey = bobKeyFac.generatePublic(x509KeySpec)
+                val ivBytes = ByteArray(16)
+                ThreadLocalRandom.current().nextBytes(ivBytes)
+                sender.createKeyAgreementFromReceivedKey(alicePubKey as DHPublicKey, ivBytes)
+                val bobPubKeyEnc = sender.keyPair.public.encoded
+
+                val diffieHellmanPacket = DiffieHellmanPacket.newBuilder()
+                        .setEncodedPublicKey(ByteString.copyFrom(bobPubKeyEnc))
+                        .setSenderGeneratedSecret(true)
+                        .setIv(ByteString.copyFrom(ivBytes))
+                        .build()
+                sendMessage(sender, diffieHellmanPacket)
+            } else {
+                val aliceKeyFac = KeyFactory.getInstance("DH")
+                val x509KeySpec = X509EncodedKeySpec(encodedKey)
+
+                val bobPubKey = aliceKeyFac.generatePublic(x509KeySpec)
+                sender.updateKeyAgreementWithReceivedKey(bobPubKey as DHPublicKey, packet.iv.toByteArray())
+                val cleartext = ByteArray(28)
+                ThreadLocalRandom.current().nextBytes(cleartext)
+                val encrypted = sender.encrypt(cleartext)
+
+                val encryptionCheckPacket = EncryptionCheckPacket.newBuilder()
+                        .setCleartext(ByteString.copyFrom(cleartext))
+                        .setEncrypted(ByteString.copyFrom(encrypted))
+                        .setSenderTrusts(false)
+                        .build()
+                sendMessage(sender, encryptionCheckPacket)
+
+            }
+        } else if (anyPacket.`is`(EncryptionCheckPacket::class.java)) {
+
+            val packet = try {
+                anyPacket.unpack(EncryptionCheckPacket::class.java)
+            } catch (e: InvalidProtocolBufferException) {
+                sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, EncryptionCheckPacket::class.java.simpleName)
+                return
+            }
+
+            val receivedCleartext = packet.cleartext.toByteArray()
+            if (receivedCleartext.contentEquals(sender.decrypt(packet.encrypted.toByteArray()))){
+                sender.encryptionDone = true
+                if (!packet.senderTrusts){
+                    val cleartextToSend = ByteArray(28)
+                    ThreadLocalRandom.current().nextBytes(cleartextToSend)
+                    val encrypted = sender.encrypt(cleartextToSend)
+                    val encryptionCheckPacket = EncryptionCheckPacket.newBuilder()
+                            .setCleartext(ByteString.copyFrom(cleartextToSend))
+                            .setEncrypted(ByteString.copyFrom(encrypted))
+                            .setSenderTrusts(true)
+                            .build()
+                    sendMessage(sender, encryptionCheckPacket)
                 }
+                println("Holy cow, it works!");
+            } else {
+                println("As expected, it doesn't work")
             }
         } else {
             sendErrorMessage(sender, flags, RemoteErrorPacket.ErrorType.UNRECOGNIZED_PACKET, anyPacket.initializationErrorString)
@@ -334,6 +374,7 @@ abstract class Sendere {
     }
 
     protected abstract fun onAuthenticationRequestReceived(secret: Long)
+
     @SneakyThrows
     private fun inflate(data: ByteArray): ByteArray {
         val inflaterBuffer = ByteArray(1024 * 1024)
@@ -346,23 +387,23 @@ abstract class Sendere {
     }
 
     private fun deflate(data: ByteArray): ByteArray {
-        val deflaterBuffer = ByteArray(1024 * 1024)
+        val deflateBuffer = ByteArray(1024 * 1024)
         deflater.reset()
         deflater.setInput(data)
         deflater.finish()
         var length = 0
         while (!deflater.finished()) {
-            length += deflater.deflate(deflaterBuffer)
+            length += deflater.deflate(deflateBuffer)
         }
         if (length == 0) {
             val a = 0
             deflater.reset()
             deflater.setInput(data)
             deflater.finish()
-            length = deflater.deflate(deflaterBuffer)
+            length = deflater.deflate(deflateBuffer)
         }
         val deflated = ByteArray(length)
-        System.arraycopy(deflaterBuffer, 0, deflated, 0, length)
+        System.arraycopy(deflateBuffer, 0, deflated, 0, length)
         return deflated
     }
 
@@ -435,6 +476,16 @@ abstract class Sendere {
         thread.start()
     }
 
+    private fun startDiffieHellman(remoteUser: RemoteUser) {
+        remoteUser.createKeyAgreement()
+        val alicePubKeyEnc = remoteUser.keyPair.public.encoded
+        val diffieHellmanPacket = DiffieHellmanPacket.newBuilder()
+                .setEncodedPublicKey(ByteString.copyFrom(alicePubKeyEnc))
+                .setSenderGeneratedSecret(false)
+                .build()
+        sendMessage(remoteUser, diffieHellmanPacket)
+    }
+
     var stopNeighbourRead = false
 
     private fun readNeighbourTable(): HashSet<ArpEntry> {
@@ -491,12 +542,9 @@ abstract class Sendere {
         if (isNewUser)
             remoteUsers.add(new RemoteUser(getNickname(), hash, address, port));
     }*/
-    fun sendMessage(remoteUser: RemoteUser, header: Byte, message: String): Boolean {
-        return sendMessage(remoteUser, header, message.toByteArray(StandardCharsets.UTF_8), message.toByteArray().size)
-    }
 
-    fun sendMessage(remoteUser: RemoteUser, header: Byte, data: ByteArray?, length: Int): Boolean {
-        return remoteUser.sendMessage(header, data, length)
+    fun sendMessage(remoteUser: RemoteUser, header: Byte, data: ByteArray): Boolean {
+        return remoteUser.sendMessage(header, data)
     }
 
     fun sendMessage(remoteUser: RemoteUser, flags: Byte, packet: Message): Boolean {
@@ -510,15 +558,11 @@ abstract class Sendere {
                 flags = 0
             }
         }
-        return sendMessage(remoteUser, flags, anyBytes)
+        return remoteUser.sendMessage(flags, anyBytes)
     }
 
     fun sendMessage(remoteUser: RemoteUser, message: Message): Boolean {
         return sendMessage(remoteUser, DEFAULT_FLAGS, message)
-    }
-
-    fun sendMessage(remoteUser: RemoteUser, flags: Byte, vararg data: ByteArray?): Boolean {
-        return remoteUser.sendMessage(flags, *data)
     }
 
     /*    public RemoteUser findRemoteUserByAddress(String address) {
@@ -532,8 +576,8 @@ abstract class Sendere {
     }*/
     fun processSendRequest(allow: Boolean, transmission: TransmissionIn) {
         if (allow) transmissionsIn[transmission.id] = transmission
-        sendMessage(transmission.user, 0.toByte(), Any.pack(SendResponsePacket.newBuilder().setAccepted(allow)
-                .setTransmissionId(transmission.id).build()).toByteArray())
+        sendMessage(transmission.user, 0.toByte(), SendResponsePacket.newBuilder().setAccepted(allow)
+                .setTransmissionId(transmission.id).build())
         if (!inRequests.isEmpty()) {
             currentInRequest = inRequests.removeLast()
             onSendRequest(currentInRequest!!)
@@ -561,32 +605,15 @@ abstract class Sendere {
     }
 
     fun sendTransmissionRequest(transmission: TransmissionOut): Boolean {
-        return sendMessage(transmission.user, 0.toByte(), Any.pack(SendRequestPacket.newBuilder()
+        return sendMessage(transmission.user, 0.toByte(), SendRequestPacket.newBuilder()
                 .setFileName(transmission.filename)
                 .setIsDirectory(transmission.isDirectory)
                 .setTransmissionId(transmission.id)
-                .build()).toByteArray())
+                .build())
     }
 
     fun sendTextMessage(user: RemoteUser, message: String?): Boolean {
-        return sendMessage(user, 0.toByte(), Any.pack(TextPacket.newBuilder().setText(message).build()).toByteArray())
-    }
-
-    fun requestAuthentication(user: RemoteUser): Boolean {
-        val cipher: Cipher
-        try {
-            cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
-            cipher.init(Cipher.ENCRYPT_MODE, rsaKeyPair.public)
-            val packet = AuthenticationStage1Packet.newBuilder()
-                    .setSecret(SUID)
-                    .setPublicKey(ByteString.copyFrom(rsaKeyPair.public.encoded))
-                    .setEncryptedSecret(ByteString.copyFrom(cipher.doFinal(Converters.longToBytes(SUID))))
-                    .build()
-            sendMessage(user, packet)
-        } catch (e: Exception) {
-            return false
-        }
-        return true
+        return sendMessage(user, 0.toByte(), TextPacket.newBuilder().setText(message).build())
     }
 
     init {
@@ -614,22 +641,23 @@ abstract class Sendere {
             e.printStackTrace()
         }
         startReceiving()
-        var clientDiscover = object : ClientDiscover(NetworkInterface.getNetworkInterfaces().toList(), mainPort){
+        val clientDiscover = object : ClientDiscover(NetworkInterface.getNetworkInterfaces().toList(), mainPort) {
             override fun onDiscoveryReceived(remoteSUID: Long, address: InetAddress, port: Int) {
-                if(remoteUsers?.getByHash(remoteSUID)  == null){
-                    var unidentifiedUser = object : RemoteUser(Socket(address, port)){
+                if (remoteUsers.getByHash(remoteSUID) == null) {
+                    val unidentifiedUser = object : RemoteUser(Socket(address, port)) {
                         override fun onDisconnected() {
                             onUserDisconnected(this)
-                            remoteUsers!!.removeByHash(hash)
+                            remoteUsers.removeByHash(hash)
                         }
 
-                        override fun onReceived(flags: Byte, data: ByteArray?) {
-                            this@Sendere.onReceive(this, flags, data!!)
+                        override fun onReceived(flags: Byte, data: ByteArray) {
+                            this@Sendere.onReceive(this, flags, data)
                         }
                     }
-                    sendMessage(unidentifiedUser, 0.toByte(), Any.pack(PingPacket.newBuilder().setSuid(SUID).setNickname(nickname).build()).toByteArray())
+                    sendMessage(unidentifiedUser, 0.toByte(), PingPacket.newBuilder().setSuid(SUID).setNickname(nickname).build())
                 }
             }
         }
+        clientDiscover.start()
     }
 }

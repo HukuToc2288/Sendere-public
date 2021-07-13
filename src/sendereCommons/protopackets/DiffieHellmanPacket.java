@@ -4,26 +4,27 @@
 package sendereCommons.protopackets;
 
 /**
- * Protobuf type {@code CreateDirectoryPacket}
+ * Protobuf type {@code DiffieHellmanPacket}
  */
-public final class CreateDirectoryPacket extends
+public final class DiffieHellmanPacket extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:CreateDirectoryPacket)
-    CreateDirectoryPacketOrBuilder {
+    // @@protoc_insertion_point(message_implements:DiffieHellmanPacket)
+    DiffieHellmanPacketOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use CreateDirectoryPacket.newBuilder() to construct.
-  private CreateDirectoryPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use DiffieHellmanPacket.newBuilder() to construct.
+  private DiffieHellmanPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private CreateDirectoryPacket() {
-    fileName_ = "";
+  private DiffieHellmanPacket() {
+    encodedPublicKey_ = com.google.protobuf.ByteString.EMPTY;
+    iv_ = com.google.protobuf.ByteString.EMPTY;
   }
 
   @java.lang.Override
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new CreateDirectoryPacket();
+    return new DiffieHellmanPacket();
   }
 
   @java.lang.Override
@@ -31,7 +32,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private CreateDirectoryPacket(
+  private DiffieHellmanPacket(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -39,6 +40,7 @@ private static final long serialVersionUID = 0L;
     if (extensionRegistry == null) {
       throw new java.lang.NullPointerException();
     }
+    int mutable_bitField0_ = 0;
     com.google.protobuf.UnknownFieldSet.Builder unknownFields =
         com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
@@ -49,15 +51,19 @@ private static final long serialVersionUID = 0L;
           case 0:
             done = true;
             break;
-          case 8: {
+          case 10: {
 
-            transmissionId_ = input.readInt64();
+            encodedPublicKey_ = input.readBytes();
             break;
           }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
+          case 16: {
 
-            fileName_ = s;
+            senderGeneratedSecret_ = input.readBool();
+            break;
+          }
+          case 26: {
+            bitField0_ |= 0x00000001;
+            iv_ = input.readBytes();
             break;
           }
           default: {
@@ -81,64 +87,57 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_CreateDirectoryPacket_descriptor;
+    return sendereCommons.protopackets.PacketProtos.internal_static_DiffieHellmanPacket_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_CreateDirectoryPacket_fieldAccessorTable
+    return sendereCommons.protopackets.PacketProtos.internal_static_DiffieHellmanPacket_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            sendereCommons.protopackets.CreateDirectoryPacket.class, sendereCommons.protopackets.CreateDirectoryPacket.Builder.class);
+            sendereCommons.protopackets.DiffieHellmanPacket.class, sendereCommons.protopackets.DiffieHellmanPacket.Builder.class);
   }
 
-  public static final int TRANSMISSIONID_FIELD_NUMBER = 1;
-  private long transmissionId_;
+  private int bitField0_;
+  public static final int ENCODEDPUBLICKEY_FIELD_NUMBER = 1;
+  private com.google.protobuf.ByteString encodedPublicKey_;
   /**
-   * <code>int64 transmissionId = 1;</code>
-   * @return The transmissionId.
+   * <code>bytes encodedPublicKey = 1;</code>
+   * @return The encodedPublicKey.
    */
   @java.lang.Override
-  public long getTransmissionId() {
-    return transmissionId_;
+  public com.google.protobuf.ByteString getEncodedPublicKey() {
+    return encodedPublicKey_;
   }
 
-  public static final int FILENAME_FIELD_NUMBER = 2;
-  private volatile java.lang.Object fileName_;
+  public static final int SENDERGENERATEDSECRET_FIELD_NUMBER = 2;
+  private boolean senderGeneratedSecret_;
   /**
-   * <code>string fileName = 2;</code>
-   * @return The fileName.
+   * <code>bool senderGeneratedSecret = 2;</code>
+   * @return The senderGeneratedSecret.
    */
   @java.lang.Override
-  public java.lang.String getFileName() {
-    java.lang.Object ref = fileName_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      fileName_ = s;
-      return s;
-    }
+  public boolean getSenderGeneratedSecret() {
+    return senderGeneratedSecret_;
+  }
+
+  public static final int IV_FIELD_NUMBER = 3;
+  private com.google.protobuf.ByteString iv_;
+  /**
+   * <code>bytes iv = 3;</code>
+   * @return Whether the iv field is set.
+   */
+  @java.lang.Override
+  public boolean hasIv() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <code>string fileName = 2;</code>
-   * @return The bytes for fileName.
+   * <code>bytes iv = 3;</code>
+   * @return The iv.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getFileNameBytes() {
-    java.lang.Object ref = fileName_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      fileName_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public com.google.protobuf.ByteString getIv() {
+    return iv_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -155,11 +154,14 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (transmissionId_ != 0L) {
-      output.writeInt64(1, transmissionId_);
+    if (!encodedPublicKey_.isEmpty()) {
+      output.writeBytes(1, encodedPublicKey_);
     }
-    if (!getFileNameBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, fileName_);
+    if (senderGeneratedSecret_ != false) {
+      output.writeBool(2, senderGeneratedSecret_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeBytes(3, iv_);
     }
     unknownFields.writeTo(output);
   }
@@ -170,12 +172,17 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (transmissionId_ != 0L) {
+    if (!encodedPublicKey_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt64Size(1, transmissionId_);
+        .computeBytesSize(1, encodedPublicKey_);
     }
-    if (!getFileNameBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, fileName_);
+    if (senderGeneratedSecret_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(2, senderGeneratedSecret_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBytesSize(3, iv_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -187,15 +194,20 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof sendereCommons.protopackets.CreateDirectoryPacket)) {
+    if (!(obj instanceof sendereCommons.protopackets.DiffieHellmanPacket)) {
       return super.equals(obj);
     }
-    sendereCommons.protopackets.CreateDirectoryPacket other = (sendereCommons.protopackets.CreateDirectoryPacket) obj;
+    sendereCommons.protopackets.DiffieHellmanPacket other = (sendereCommons.protopackets.DiffieHellmanPacket) obj;
 
-    if (getTransmissionId()
-        != other.getTransmissionId()) return false;
-    if (!getFileName()
-        .equals(other.getFileName())) return false;
+    if (!getEncodedPublicKey()
+        .equals(other.getEncodedPublicKey())) return false;
+    if (getSenderGeneratedSecret()
+        != other.getSenderGeneratedSecret()) return false;
+    if (hasIv() != other.hasIv()) return false;
+    if (hasIv()) {
+      if (!getIv()
+          .equals(other.getIv())) return false;
+    }
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -207,79 +219,83 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + TRANSMISSIONID_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-        getTransmissionId());
-    hash = (37 * hash) + FILENAME_FIELD_NUMBER;
-    hash = (53 * hash) + getFileName().hashCode();
+    hash = (37 * hash) + ENCODEDPUBLICKEY_FIELD_NUMBER;
+    hash = (53 * hash) + getEncodedPublicKey().hashCode();
+    hash = (37 * hash) + SENDERGENERATEDSECRET_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSenderGeneratedSecret());
+    if (hasIv()) {
+      hash = (37 * hash) + IV_FIELD_NUMBER;
+      hash = (53 * hash) + getIv().hashCode();
+    }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(byte[] data)
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseDelimitedFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseDelimitedFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.CreateDirectoryPacket parseFrom(
+  public static sendereCommons.protopackets.DiffieHellmanPacket parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -292,7 +308,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(sendereCommons.protopackets.CreateDirectoryPacket prototype) {
+  public static Builder newBuilder(sendereCommons.protopackets.DiffieHellmanPacket prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -308,26 +324,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code CreateDirectoryPacket}
+   * Protobuf type {@code DiffieHellmanPacket}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:CreateDirectoryPacket)
-      sendereCommons.protopackets.CreateDirectoryPacketOrBuilder {
+      // @@protoc_insertion_point(builder_implements:DiffieHellmanPacket)
+      sendereCommons.protopackets.DiffieHellmanPacketOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_CreateDirectoryPacket_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_DiffieHellmanPacket_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_CreateDirectoryPacket_fieldAccessorTable
+      return sendereCommons.protopackets.PacketProtos.internal_static_DiffieHellmanPacket_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              sendereCommons.protopackets.CreateDirectoryPacket.class, sendereCommons.protopackets.CreateDirectoryPacket.Builder.class);
+              sendereCommons.protopackets.DiffieHellmanPacket.class, sendereCommons.protopackets.DiffieHellmanPacket.Builder.class);
     }
 
-    // Construct using sendereCommons.protopackets.CreateDirectoryPacket.newBuilder()
+    // Construct using sendereCommons.protopackets.DiffieHellmanPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -345,27 +361,29 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      transmissionId_ = 0L;
+      encodedPublicKey_ = com.google.protobuf.ByteString.EMPTY;
 
-      fileName_ = "";
+      senderGeneratedSecret_ = false;
 
+      iv_ = com.google.protobuf.ByteString.EMPTY;
+      bitField0_ = (bitField0_ & ~0x00000001);
       return this;
     }
 
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_CreateDirectoryPacket_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_DiffieHellmanPacket_descriptor;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.CreateDirectoryPacket getDefaultInstanceForType() {
-      return sendereCommons.protopackets.CreateDirectoryPacket.getDefaultInstance();
+    public sendereCommons.protopackets.DiffieHellmanPacket getDefaultInstanceForType() {
+      return sendereCommons.protopackets.DiffieHellmanPacket.getDefaultInstance();
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.CreateDirectoryPacket build() {
-      sendereCommons.protopackets.CreateDirectoryPacket result = buildPartial();
+    public sendereCommons.protopackets.DiffieHellmanPacket build() {
+      sendereCommons.protopackets.DiffieHellmanPacket result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -373,10 +391,17 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.CreateDirectoryPacket buildPartial() {
-      sendereCommons.protopackets.CreateDirectoryPacket result = new sendereCommons.protopackets.CreateDirectoryPacket(this);
-      result.transmissionId_ = transmissionId_;
-      result.fileName_ = fileName_;
+    public sendereCommons.protopackets.DiffieHellmanPacket buildPartial() {
+      sendereCommons.protopackets.DiffieHellmanPacket result = new sendereCommons.protopackets.DiffieHellmanPacket(this);
+      int from_bitField0_ = bitField0_;
+      int to_bitField0_ = 0;
+      result.encodedPublicKey_ = encodedPublicKey_;
+      result.senderGeneratedSecret_ = senderGeneratedSecret_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        to_bitField0_ |= 0x00000001;
+      }
+      result.iv_ = iv_;
+      result.bitField0_ = to_bitField0_;
       onBuilt();
       return result;
     }
@@ -415,22 +440,24 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof sendereCommons.protopackets.CreateDirectoryPacket) {
-        return mergeFrom((sendereCommons.protopackets.CreateDirectoryPacket)other);
+      if (other instanceof sendereCommons.protopackets.DiffieHellmanPacket) {
+        return mergeFrom((sendereCommons.protopackets.DiffieHellmanPacket)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(sendereCommons.protopackets.CreateDirectoryPacket other) {
-      if (other == sendereCommons.protopackets.CreateDirectoryPacket.getDefaultInstance()) return this;
-      if (other.getTransmissionId() != 0L) {
-        setTransmissionId(other.getTransmissionId());
+    public Builder mergeFrom(sendereCommons.protopackets.DiffieHellmanPacket other) {
+      if (other == sendereCommons.protopackets.DiffieHellmanPacket.getDefaultInstance()) return this;
+      if (other.getEncodedPublicKey() != com.google.protobuf.ByteString.EMPTY) {
+        setEncodedPublicKey(other.getEncodedPublicKey());
       }
-      if (!other.getFileName().isEmpty()) {
-        fileName_ = other.fileName_;
-        onChanged();
+      if (other.getSenderGeneratedSecret() != false) {
+        setSenderGeneratedSecret(other.getSenderGeneratedSecret());
+      }
+      if (other.hasIv()) {
+        setIv(other.getIv());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -447,11 +474,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      sendereCommons.protopackets.CreateDirectoryPacket parsedMessage = null;
+      sendereCommons.protopackets.DiffieHellmanPacket parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (sendereCommons.protopackets.CreateDirectoryPacket) e.getUnfinishedMessage();
+        parsedMessage = (sendereCommons.protopackets.DiffieHellmanPacket) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -460,110 +487,111 @@ private static final long serialVersionUID = 0L;
       }
       return this;
     }
+    private int bitField0_;
 
-    private long transmissionId_ ;
+    private com.google.protobuf.ByteString encodedPublicKey_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>int64 transmissionId = 1;</code>
-     * @return The transmissionId.
+     * <code>bytes encodedPublicKey = 1;</code>
+     * @return The encodedPublicKey.
      */
     @java.lang.Override
-    public long getTransmissionId() {
-      return transmissionId_;
+    public com.google.protobuf.ByteString getEncodedPublicKey() {
+      return encodedPublicKey_;
     }
     /**
-     * <code>int64 transmissionId = 1;</code>
-     * @param value The transmissionId to set.
+     * <code>bytes encodedPublicKey = 1;</code>
+     * @param value The encodedPublicKey to set.
      * @return This builder for chaining.
      */
-    public Builder setTransmissionId(long value) {
-      
-      transmissionId_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>int64 transmissionId = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTransmissionId() {
-      
-      transmissionId_ = 0L;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object fileName_ = "";
-    /**
-     * <code>string fileName = 2;</code>
-     * @return The fileName.
-     */
-    public java.lang.String getFileName() {
-      java.lang.Object ref = fileName_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        fileName_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string fileName = 2;</code>
-     * @return The bytes for fileName.
-     */
-    public com.google.protobuf.ByteString
-        getFileNameBytes() {
-      java.lang.Object ref = fileName_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        fileName_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string fileName = 2;</code>
-     * @param value The fileName to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFileName(
-        java.lang.String value) {
+    public Builder setEncodedPublicKey(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   
-      fileName_ = value;
+      encodedPublicKey_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>string fileName = 2;</code>
+     * <code>bytes encodedPublicKey = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearFileName() {
+    public Builder clearEncodedPublicKey() {
       
-      fileName_ = getDefaultInstance().getFileName();
+      encodedPublicKey_ = getDefaultInstance().getEncodedPublicKey();
+      onChanged();
+      return this;
+    }
+
+    private boolean senderGeneratedSecret_ ;
+    /**
+     * <code>bool senderGeneratedSecret = 2;</code>
+     * @return The senderGeneratedSecret.
+     */
+    @java.lang.Override
+    public boolean getSenderGeneratedSecret() {
+      return senderGeneratedSecret_;
+    }
+    /**
+     * <code>bool senderGeneratedSecret = 2;</code>
+     * @param value The senderGeneratedSecret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSenderGeneratedSecret(boolean value) {
+      
+      senderGeneratedSecret_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>string fileName = 2;</code>
-     * @param value The bytes for fileName to set.
+     * <code>bool senderGeneratedSecret = 2;</code>
      * @return This builder for chaining.
      */
-    public Builder setFileNameBytes(
-        com.google.protobuf.ByteString value) {
+    public Builder clearSenderGeneratedSecret() {
+      
+      senderGeneratedSecret_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.ByteString iv_ = com.google.protobuf.ByteString.EMPTY;
+    /**
+     * <code>bytes iv = 3;</code>
+     * @return Whether the iv field is set.
+     */
+    @java.lang.Override
+    public boolean hasIv() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>bytes iv = 3;</code>
+     * @return The iv.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getIv() {
+      return iv_;
+    }
+    /**
+     * <code>bytes iv = 3;</code>
+     * @param value The iv to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIv(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  checkByteStringIsUtf8(value);
-      
-      fileName_ = value;
+  bitField0_ |= 0x00000001;
+      iv_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bytes iv = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIv() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      iv_ = getDefaultInstance().getIv();
       onChanged();
       return this;
     }
@@ -580,41 +608,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:CreateDirectoryPacket)
+    // @@protoc_insertion_point(builder_scope:DiffieHellmanPacket)
   }
 
-  // @@protoc_insertion_point(class_scope:CreateDirectoryPacket)
-  private static final sendereCommons.protopackets.CreateDirectoryPacket DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:DiffieHellmanPacket)
+  private static final sendereCommons.protopackets.DiffieHellmanPacket DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new sendereCommons.protopackets.CreateDirectoryPacket();
+    DEFAULT_INSTANCE = new sendereCommons.protopackets.DiffieHellmanPacket();
   }
 
-  public static sendereCommons.protopackets.CreateDirectoryPacket getDefaultInstance() {
+  public static sendereCommons.protopackets.DiffieHellmanPacket getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<CreateDirectoryPacket>
-      PARSER = new com.google.protobuf.AbstractParser<CreateDirectoryPacket>() {
+  private static final com.google.protobuf.Parser<DiffieHellmanPacket>
+      PARSER = new com.google.protobuf.AbstractParser<DiffieHellmanPacket>() {
     @java.lang.Override
-    public CreateDirectoryPacket parsePartialFrom(
+    public DiffieHellmanPacket parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new CreateDirectoryPacket(input, extensionRegistry);
+      return new DiffieHellmanPacket(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<CreateDirectoryPacket> parser() {
+  public static com.google.protobuf.Parser<DiffieHellmanPacket> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<CreateDirectoryPacket> getParserForType() {
+  public com.google.protobuf.Parser<DiffieHellmanPacket> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public sendereCommons.protopackets.CreateDirectoryPacket getDefaultInstanceForType() {
+  public sendereCommons.protopackets.DiffieHellmanPacket getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

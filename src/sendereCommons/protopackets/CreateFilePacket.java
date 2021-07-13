@@ -327,7 +327,7 @@ private static final long serialVersionUID = 0L;
               sendereCommons.protopackets.CreateFilePacket.class, sendereCommons.protopackets.CreateFilePacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.CreateFilePacket.newBuilder()
+    // Construct using sendereCommons.protopackets.CreateFilePacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }

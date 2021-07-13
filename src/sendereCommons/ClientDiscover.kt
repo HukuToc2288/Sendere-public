@@ -2,6 +2,7 @@ package sendereCommons
 
 import sendereCommons.protopackets.DiscoveryPacket
 import com.google.protobuf.ByteString
+import java.io.IOException
 import java.net.*
 import java.util.*
 import kotlin.collections.ArrayList
@@ -23,6 +24,9 @@ abstract class ClientDiscover(networkInterfaces: List<NetworkInterface>, private
                 broadcastSockets.add(DatagramSocket(0, inetAddress))
             }
         }
+    }
+
+    public fun start(){
         startDiscovery()
         startBroadcast()
     }
@@ -68,7 +72,11 @@ abstract class ClientDiscover(networkInterfaces: List<NetworkInterface>, private
                         for (sendPort in Sendere.START_PORT..Sendere.END_PORT) {
                             val discoveryPacket = DatagramPacket(discoveryMessage, 0, discoveryMessage.size,
                                     InetAddress.getByName(multicastGroupAddress), sendPort)
-                            broadcastSocket.send(discoveryPacket)
+                            try {
+                                broadcastSocket.send(discoveryPacket)
+                            } catch (e: IOException){
+                                //e.printStackTrace()
+                            }
                         }
                     }
                     try {

@@ -59,19 +59,6 @@ message SendResponsePacket {
     bool accepted = 2;
 }
 
-
-message TransmissionControlPacket {
-    int64 transmissionId = 1;
-    Signal signal = 2;
-
-    enum Signal {
-        SENDING_CANCELED = 0;
-        RECEIVING_CANCELED = 1;
-        SENDING_COMPLETE = 2;
-        RECEIVING_COMPLETE = 3;
-    }
-}
-
 message CreateFilePacket {
     int64 transmissionId = 1;
     string fileName = 2;
@@ -103,20 +90,14 @@ message TransmissionControlPacket {
     }
 }
 
-message AuthenticationStage1Packet {
-    bytes UUID = 1;
-    bytes publicKey = 2;
-    bytes encryptedSecret = 3;
-    int64 secret = 4;
+message DiffieHellmanPacket {
+    bytes encodedPublicKey = 1;
+    bool senderGeneratedSecret = 2;
+    optional bytes iv = 3;
 }
 
-message AuthenticationStage2Packet {
-    bytes UUID = 1;
-    bytes publicKey = 2;
-    bytes encryptedSecret = 3;
+message EncryptionCheckPacket {
+    bytes encrypted = 1;
+    bytes cleartext = 2;
+    bool senderTrusts = 3;
 }
-
-message AuthenticationConfirmPacket {
-    bool authConfirmed = 1;
-}
-

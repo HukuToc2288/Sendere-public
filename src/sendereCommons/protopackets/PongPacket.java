@@ -383,7 +383,7 @@ private static final long serialVersionUID = 0L;
               sendereCommons.protopackets.PongPacket.class, sendereCommons.protopackets.PongPacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.PongPacket.newBuilder()
+    // Construct using sendereCommons.protopackets.PongPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }

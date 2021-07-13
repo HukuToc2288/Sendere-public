@@ -4,27 +4,26 @@
 package sendereCommons.protopackets;
 
 /**
- * Protobuf type {@code AuthenticationStage1Packet}
+ * Protobuf type {@code IdentificationPacket}
  */
-public final class AuthenticationStage1Packet extends
+public final class IdentificationPacket extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:AuthenticationStage1Packet)
-    AuthenticationStage1PacketOrBuilder {
+    // @@protoc_insertion_point(message_implements:IdentificationPacket)
+    IdentificationPacketOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use AuthenticationStage1Packet.newBuilder() to construct.
-  private AuthenticationStage1Packet(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use IdentificationPacket.newBuilder() to construct.
+  private IdentificationPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private AuthenticationStage1Packet() {
-    publicKey_ = com.google.protobuf.ByteString.EMPTY;
-    encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
+  private IdentificationPacket() {
+    nickname_ = "";
   }
 
   @java.lang.Override
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new AuthenticationStage1Packet();
+    return new IdentificationPacket();
   }
 
   @java.lang.Override
@@ -32,7 +31,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private AuthenticationStage1Packet(
+  private IdentificationPacket(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -51,18 +50,19 @@ private static final long serialVersionUID = 0L;
             done = true;
             break;
           case 10: {
+            java.lang.String s = input.readStringRequireUtf8();
 
-            publicKey_ = input.readBytes();
+            nickname_ = s;
             break;
           }
-          case 18: {
+          case 16: {
 
-            encryptedSecret_ = input.readBytes();
+            remoteIdentified_ = input.readBool();
             break;
           }
           case 24: {
 
-            secret_ = input.readInt64();
+            supprotEnctryption_ = input.readBool();
             break;
           }
           default: {
@@ -86,48 +86,75 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage1Packet_descriptor;
+    return sendereCommons.protopackets.PacketProtos.internal_static_IdentificationPacket_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage1Packet_fieldAccessorTable
+    return sendereCommons.protopackets.PacketProtos.internal_static_IdentificationPacket_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            sendereCommons.protopackets.AuthenticationStage1Packet.class, sendereCommons.protopackets.AuthenticationStage1Packet.Builder.class);
+            sendereCommons.protopackets.IdentificationPacket.class, sendereCommons.protopackets.IdentificationPacket.Builder.class);
   }
 
-  public static final int PUBLICKEY_FIELD_NUMBER = 1;
-  private com.google.protobuf.ByteString publicKey_;
+  public static final int NICKNAME_FIELD_NUMBER = 1;
+  private volatile java.lang.Object nickname_;
   /**
-   * <code>bytes publicKey = 1;</code>
-   * @return The publicKey.
+   * <code>string nickname = 1;</code>
+   * @return The nickname.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getPublicKey() {
-    return publicKey_;
+  public java.lang.String getNickname() {
+    java.lang.Object ref = nickname_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      nickname_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string nickname = 1;</code>
+   * @return The bytes for nickname.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getNicknameBytes() {
+    java.lang.Object ref = nickname_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      nickname_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
-  public static final int ENCRYPTEDSECRET_FIELD_NUMBER = 2;
-  private com.google.protobuf.ByteString encryptedSecret_;
+  public static final int REMOTEIDENTIFIED_FIELD_NUMBER = 2;
+  private boolean remoteIdentified_;
   /**
-   * <code>bytes encryptedSecret = 2;</code>
-   * @return The encryptedSecret.
+   * <code>bool remoteIdentified = 2;</code>
+   * @return The remoteIdentified.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getEncryptedSecret() {
-    return encryptedSecret_;
+  public boolean getRemoteIdentified() {
+    return remoteIdentified_;
   }
 
-  public static final int SECRET_FIELD_NUMBER = 3;
-  private long secret_;
+  public static final int SUPPROTENCTRYPTION_FIELD_NUMBER = 3;
+  private boolean supprotEnctryption_;
   /**
-   * <code>int64 secret = 3;</code>
-   * @return The secret.
+   * <code>bool supprotEnctryption = 3;</code>
+   * @return The supprotEnctryption.
    */
   @java.lang.Override
-  public long getSecret() {
-    return secret_;
+  public boolean getSupprotEnctryption() {
+    return supprotEnctryption_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -144,14 +171,14 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!publicKey_.isEmpty()) {
-      output.writeBytes(1, publicKey_);
+    if (!getNicknameBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, nickname_);
     }
-    if (!encryptedSecret_.isEmpty()) {
-      output.writeBytes(2, encryptedSecret_);
+    if (remoteIdentified_ != false) {
+      output.writeBool(2, remoteIdentified_);
     }
-    if (secret_ != 0L) {
-      output.writeInt64(3, secret_);
+    if (supprotEnctryption_ != false) {
+      output.writeBool(3, supprotEnctryption_);
     }
     unknownFields.writeTo(output);
   }
@@ -162,17 +189,16 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!publicKey_.isEmpty()) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(1, publicKey_);
+    if (!getNicknameBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, nickname_);
     }
-    if (!encryptedSecret_.isEmpty()) {
+    if (remoteIdentified_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(2, encryptedSecret_);
+        .computeBoolSize(2, remoteIdentified_);
     }
-    if (secret_ != 0L) {
+    if (supprotEnctryption_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt64Size(3, secret_);
+        .computeBoolSize(3, supprotEnctryption_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -184,17 +210,17 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof sendereCommons.protopackets.AuthenticationStage1Packet)) {
+    if (!(obj instanceof sendereCommons.protopackets.IdentificationPacket)) {
       return super.equals(obj);
     }
-    sendereCommons.protopackets.AuthenticationStage1Packet other = (sendereCommons.protopackets.AuthenticationStage1Packet) obj;
+    sendereCommons.protopackets.IdentificationPacket other = (sendereCommons.protopackets.IdentificationPacket) obj;
 
-    if (!getPublicKey()
-        .equals(other.getPublicKey())) return false;
-    if (!getEncryptedSecret()
-        .equals(other.getEncryptedSecret())) return false;
-    if (getSecret()
-        != other.getSecret()) return false;
+    if (!getNickname()
+        .equals(other.getNickname())) return false;
+    if (getRemoteIdentified()
+        != other.getRemoteIdentified()) return false;
+    if (getSupprotEnctryption()
+        != other.getSupprotEnctryption()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -206,81 +232,82 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + PUBLICKEY_FIELD_NUMBER;
-    hash = (53 * hash) + getPublicKey().hashCode();
-    hash = (37 * hash) + ENCRYPTEDSECRET_FIELD_NUMBER;
-    hash = (53 * hash) + getEncryptedSecret().hashCode();
-    hash = (37 * hash) + SECRET_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-        getSecret());
+    hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
+    hash = (53 * hash) + getNickname().hashCode();
+    hash = (37 * hash) + REMOTEIDENTIFIED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getRemoteIdentified());
+    hash = (37 * hash) + SUPPROTENCTRYPTION_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSupprotEnctryption());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(byte[] data)
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseDelimitedFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.IdentificationPacket parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseDelimitedFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage1Packet parseFrom(
+  public static sendereCommons.protopackets.IdentificationPacket parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -293,7 +320,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(sendereCommons.protopackets.AuthenticationStage1Packet prototype) {
+  public static Builder newBuilder(sendereCommons.protopackets.IdentificationPacket prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -309,26 +336,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code AuthenticationStage1Packet}
+   * Protobuf type {@code IdentificationPacket}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:AuthenticationStage1Packet)
-      sendereCommons.protopackets.AuthenticationStage1PacketOrBuilder {
+      // @@protoc_insertion_point(builder_implements:IdentificationPacket)
+      sendereCommons.protopackets.IdentificationPacketOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage1Packet_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_IdentificationPacket_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage1Packet_fieldAccessorTable
+      return sendereCommons.protopackets.PacketProtos.internal_static_IdentificationPacket_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              sendereCommons.protopackets.AuthenticationStage1Packet.class, sendereCommons.protopackets.AuthenticationStage1Packet.Builder.class);
+              sendereCommons.protopackets.IdentificationPacket.class, sendereCommons.protopackets.IdentificationPacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.AuthenticationStage1Packet.newBuilder()
+    // Construct using sendereCommons.protopackets.IdentificationPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -346,11 +373,11 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      publicKey_ = com.google.protobuf.ByteString.EMPTY;
+      nickname_ = "";
 
-      encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
+      remoteIdentified_ = false;
 
-      secret_ = 0L;
+      supprotEnctryption_ = false;
 
       return this;
     }
@@ -358,17 +385,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage1Packet_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_IdentificationPacket_descriptor;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage1Packet getDefaultInstanceForType() {
-      return sendereCommons.protopackets.AuthenticationStage1Packet.getDefaultInstance();
+    public sendereCommons.protopackets.IdentificationPacket getDefaultInstanceForType() {
+      return sendereCommons.protopackets.IdentificationPacket.getDefaultInstance();
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage1Packet build() {
-      sendereCommons.protopackets.AuthenticationStage1Packet result = buildPartial();
+    public sendereCommons.protopackets.IdentificationPacket build() {
+      sendereCommons.protopackets.IdentificationPacket result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -376,11 +403,11 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage1Packet buildPartial() {
-      sendereCommons.protopackets.AuthenticationStage1Packet result = new sendereCommons.protopackets.AuthenticationStage1Packet(this);
-      result.publicKey_ = publicKey_;
-      result.encryptedSecret_ = encryptedSecret_;
-      result.secret_ = secret_;
+    public sendereCommons.protopackets.IdentificationPacket buildPartial() {
+      sendereCommons.protopackets.IdentificationPacket result = new sendereCommons.protopackets.IdentificationPacket(this);
+      result.nickname_ = nickname_;
+      result.remoteIdentified_ = remoteIdentified_;
+      result.supprotEnctryption_ = supprotEnctryption_;
       onBuilt();
       return result;
     }
@@ -419,24 +446,25 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof sendereCommons.protopackets.AuthenticationStage1Packet) {
-        return mergeFrom((sendereCommons.protopackets.AuthenticationStage1Packet)other);
+      if (other instanceof sendereCommons.protopackets.IdentificationPacket) {
+        return mergeFrom((sendereCommons.protopackets.IdentificationPacket)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(sendereCommons.protopackets.AuthenticationStage1Packet other) {
-      if (other == sendereCommons.protopackets.AuthenticationStage1Packet.getDefaultInstance()) return this;
-      if (other.getPublicKey() != com.google.protobuf.ByteString.EMPTY) {
-        setPublicKey(other.getPublicKey());
+    public Builder mergeFrom(sendereCommons.protopackets.IdentificationPacket other) {
+      if (other == sendereCommons.protopackets.IdentificationPacket.getDefaultInstance()) return this;
+      if (!other.getNickname().isEmpty()) {
+        nickname_ = other.nickname_;
+        onChanged();
       }
-      if (other.getEncryptedSecret() != com.google.protobuf.ByteString.EMPTY) {
-        setEncryptedSecret(other.getEncryptedSecret());
+      if (other.getRemoteIdentified() != false) {
+        setRemoteIdentified(other.getRemoteIdentified());
       }
-      if (other.getSecret() != 0L) {
-        setSecret(other.getSecret());
+      if (other.getSupprotEnctryption() != false) {
+        setSupprotEnctryption(other.getSupprotEnctryption());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -453,11 +481,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      sendereCommons.protopackets.AuthenticationStage1Packet parsedMessage = null;
+      sendereCommons.protopackets.IdentificationPacket parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (sendereCommons.protopackets.AuthenticationStage1Packet) e.getUnfinishedMessage();
+        parsedMessage = (sendereCommons.protopackets.IdentificationPacket) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -467,101 +495,140 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private com.google.protobuf.ByteString publicKey_ = com.google.protobuf.ByteString.EMPTY;
+    private java.lang.Object nickname_ = "";
     /**
-     * <code>bytes publicKey = 1;</code>
-     * @return The publicKey.
+     * <code>string nickname = 1;</code>
+     * @return The nickname.
      */
-    @java.lang.Override
-    public com.google.protobuf.ByteString getPublicKey() {
-      return publicKey_;
+    public java.lang.String getNickname() {
+      java.lang.Object ref = nickname_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        nickname_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
     }
     /**
-     * <code>bytes publicKey = 1;</code>
-     * @param value The publicKey to set.
+     * <code>string nickname = 1;</code>
+     * @return The bytes for nickname.
+     */
+    public com.google.protobuf.ByteString
+        getNicknameBytes() {
+      java.lang.Object ref = nickname_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        nickname_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string nickname = 1;</code>
+     * @param value The nickname to set.
      * @return This builder for chaining.
      */
-    public Builder setPublicKey(com.google.protobuf.ByteString value) {
+    public Builder setNickname(
+        java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
   
-      publicKey_ = value;
+      nickname_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bytes publicKey = 1;</code>
+     * <code>string nickname = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearPublicKey() {
+    public Builder clearNickname() {
       
-      publicKey_ = getDefaultInstance().getPublicKey();
+      nickname_ = getDefaultInstance().getNickname();
       onChanged();
       return this;
     }
-
-    private com.google.protobuf.ByteString encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>bytes encryptedSecret = 2;</code>
-     * @return The encryptedSecret.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString getEncryptedSecret() {
-      return encryptedSecret_;
-    }
-    /**
-     * <code>bytes encryptedSecret = 2;</code>
-     * @param value The encryptedSecret to set.
+     * <code>string nickname = 1;</code>
+     * @param value The bytes for nickname to set.
      * @return This builder for chaining.
      */
-    public Builder setEncryptedSecret(com.google.protobuf.ByteString value) {
+    public Builder setNicknameBytes(
+        com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
-  
-      encryptedSecret_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>bytes encryptedSecret = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearEncryptedSecret() {
+  checkByteStringIsUtf8(value);
       
-      encryptedSecret_ = getDefaultInstance().getEncryptedSecret();
+      nickname_ = value;
       onChanged();
       return this;
     }
 
-    private long secret_ ;
+    private boolean remoteIdentified_ ;
     /**
-     * <code>int64 secret = 3;</code>
-     * @return The secret.
+     * <code>bool remoteIdentified = 2;</code>
+     * @return The remoteIdentified.
      */
     @java.lang.Override
-    public long getSecret() {
-      return secret_;
+    public boolean getRemoteIdentified() {
+      return remoteIdentified_;
     }
     /**
-     * <code>int64 secret = 3;</code>
-     * @param value The secret to set.
+     * <code>bool remoteIdentified = 2;</code>
+     * @param value The remoteIdentified to set.
      * @return This builder for chaining.
      */
-    public Builder setSecret(long value) {
+    public Builder setRemoteIdentified(boolean value) {
       
-      secret_ = value;
+      remoteIdentified_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>int64 secret = 3;</code>
+     * <code>bool remoteIdentified = 2;</code>
      * @return This builder for chaining.
      */
-    public Builder clearSecret() {
+    public Builder clearRemoteIdentified() {
       
-      secret_ = 0L;
+      remoteIdentified_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean supprotEnctryption_ ;
+    /**
+     * <code>bool supprotEnctryption = 3;</code>
+     * @return The supprotEnctryption.
+     */
+    @java.lang.Override
+    public boolean getSupprotEnctryption() {
+      return supprotEnctryption_;
+    }
+    /**
+     * <code>bool supprotEnctryption = 3;</code>
+     * @param value The supprotEnctryption to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSupprotEnctryption(boolean value) {
+      
+      supprotEnctryption_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool supprotEnctryption = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSupprotEnctryption() {
+      
+      supprotEnctryption_ = false;
       onChanged();
       return this;
     }
@@ -578,41 +645,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:AuthenticationStage1Packet)
+    // @@protoc_insertion_point(builder_scope:IdentificationPacket)
   }
 
-  // @@protoc_insertion_point(class_scope:AuthenticationStage1Packet)
-  private static final sendereCommons.protopackets.AuthenticationStage1Packet DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:IdentificationPacket)
+  private static final sendereCommons.protopackets.IdentificationPacket DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new sendereCommons.protopackets.AuthenticationStage1Packet();
+    DEFAULT_INSTANCE = new sendereCommons.protopackets.IdentificationPacket();
   }
 
-  public static sendereCommons.protopackets.AuthenticationStage1Packet getDefaultInstance() {
+  public static sendereCommons.protopackets.IdentificationPacket getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<AuthenticationStage1Packet>
-      PARSER = new com.google.protobuf.AbstractParser<AuthenticationStage1Packet>() {
+  private static final com.google.protobuf.Parser<IdentificationPacket>
+      PARSER = new com.google.protobuf.AbstractParser<IdentificationPacket>() {
     @java.lang.Override
-    public AuthenticationStage1Packet parsePartialFrom(
+    public IdentificationPacket parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new AuthenticationStage1Packet(input, extensionRegistry);
+      return new IdentificationPacket(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<AuthenticationStage1Packet> parser() {
+  public static com.google.protobuf.Parser<IdentificationPacket> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<AuthenticationStage1Packet> getParserForType() {
+  public com.google.protobuf.Parser<IdentificationPacket> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public sendereCommons.protopackets.AuthenticationStage1Packet getDefaultInstanceForType() {
+  public sendereCommons.protopackets.IdentificationPacket getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

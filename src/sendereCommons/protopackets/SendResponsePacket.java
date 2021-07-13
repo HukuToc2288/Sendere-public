@@ -300,7 +300,7 @@ private static final long serialVersionUID = 0L;
               sendereCommons.protopackets.SendResponsePacket.class, sendereCommons.protopackets.SendResponsePacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.SendResponsePacket.newBuilder()
+    // Construct using sendereCommons.protopackets.SendResponsePacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }

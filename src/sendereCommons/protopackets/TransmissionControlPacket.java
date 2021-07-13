@@ -434,7 +434,7 @@ private static final long serialVersionUID = 0L;
               sendereCommons.protopackets.TransmissionControlPacket.class, sendereCommons.protopackets.TransmissionControlPacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.TransmissionControlPacket.newBuilder()
+    // Construct using sendereCommons.protopackets.TransmissionControlPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }

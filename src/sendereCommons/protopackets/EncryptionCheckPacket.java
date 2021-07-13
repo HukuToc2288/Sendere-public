@@ -4,27 +4,27 @@
 package sendereCommons.protopackets;
 
 /**
- * Protobuf type {@code AuthenticationStage2Packet}
+ * Protobuf type {@code EncryptionCheckPacket}
  */
-public final class AuthenticationStage2Packet extends
+public final class EncryptionCheckPacket extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:AuthenticationStage2Packet)
-    AuthenticationStage2PacketOrBuilder {
+    // @@protoc_insertion_point(message_implements:EncryptionCheckPacket)
+    EncryptionCheckPacketOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use AuthenticationStage2Packet.newBuilder() to construct.
-  private AuthenticationStage2Packet(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use EncryptionCheckPacket.newBuilder() to construct.
+  private EncryptionCheckPacket(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private AuthenticationStage2Packet() {
-    publicKey_ = com.google.protobuf.ByteString.EMPTY;
-    encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
+  private EncryptionCheckPacket() {
+    encrypted_ = com.google.protobuf.ByteString.EMPTY;
+    cleartext_ = com.google.protobuf.ByteString.EMPTY;
   }
 
   @java.lang.Override
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new AuthenticationStage2Packet();
+    return new EncryptionCheckPacket();
   }
 
   @java.lang.Override
@@ -32,7 +32,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private AuthenticationStage2Packet(
+  private EncryptionCheckPacket(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -52,12 +52,17 @@ private static final long serialVersionUID = 0L;
             break;
           case 10: {
 
-            publicKey_ = input.readBytes();
+            encrypted_ = input.readBytes();
             break;
           }
           case 18: {
 
-            encryptedSecret_ = input.readBytes();
+            cleartext_ = input.readBytes();
+            break;
+          }
+          case 24: {
+
+            senderTrusts_ = input.readBool();
             break;
           }
           default: {
@@ -81,37 +86,48 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage2Packet_descriptor;
+    return sendereCommons.protopackets.PacketProtos.internal_static_EncryptionCheckPacket_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage2Packet_fieldAccessorTable
+    return sendereCommons.protopackets.PacketProtos.internal_static_EncryptionCheckPacket_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            sendereCommons.protopackets.AuthenticationStage2Packet.class, sendereCommons.protopackets.AuthenticationStage2Packet.Builder.class);
+            sendereCommons.protopackets.EncryptionCheckPacket.class, sendereCommons.protopackets.EncryptionCheckPacket.Builder.class);
   }
 
-  public static final int PUBLICKEY_FIELD_NUMBER = 1;
-  private com.google.protobuf.ByteString publicKey_;
+  public static final int ENCRYPTED_FIELD_NUMBER = 1;
+  private com.google.protobuf.ByteString encrypted_;
   /**
-   * <code>bytes publicKey = 1;</code>
-   * @return The publicKey.
+   * <code>bytes encrypted = 1;</code>
+   * @return The encrypted.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getPublicKey() {
-    return publicKey_;
+  public com.google.protobuf.ByteString getEncrypted() {
+    return encrypted_;
   }
 
-  public static final int ENCRYPTEDSECRET_FIELD_NUMBER = 2;
-  private com.google.protobuf.ByteString encryptedSecret_;
+  public static final int CLEARTEXT_FIELD_NUMBER = 2;
+  private com.google.protobuf.ByteString cleartext_;
   /**
-   * <code>bytes encryptedSecret = 2;</code>
-   * @return The encryptedSecret.
+   * <code>bytes cleartext = 2;</code>
+   * @return The cleartext.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getEncryptedSecret() {
-    return encryptedSecret_;
+  public com.google.protobuf.ByteString getCleartext() {
+    return cleartext_;
+  }
+
+  public static final int SENDERTRUSTS_FIELD_NUMBER = 3;
+  private boolean senderTrusts_;
+  /**
+   * <code>bool senderTrusts = 3;</code>
+   * @return The senderTrusts.
+   */
+  @java.lang.Override
+  public boolean getSenderTrusts() {
+    return senderTrusts_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -128,11 +144,14 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!publicKey_.isEmpty()) {
-      output.writeBytes(1, publicKey_);
+    if (!encrypted_.isEmpty()) {
+      output.writeBytes(1, encrypted_);
     }
-    if (!encryptedSecret_.isEmpty()) {
-      output.writeBytes(2, encryptedSecret_);
+    if (!cleartext_.isEmpty()) {
+      output.writeBytes(2, cleartext_);
+    }
+    if (senderTrusts_ != false) {
+      output.writeBool(3, senderTrusts_);
     }
     unknownFields.writeTo(output);
   }
@@ -143,13 +162,17 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!publicKey_.isEmpty()) {
+    if (!encrypted_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(1, publicKey_);
+        .computeBytesSize(1, encrypted_);
     }
-    if (!encryptedSecret_.isEmpty()) {
+    if (!cleartext_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(2, encryptedSecret_);
+        .computeBytesSize(2, cleartext_);
+    }
+    if (senderTrusts_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(3, senderTrusts_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -161,15 +184,17 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof sendereCommons.protopackets.AuthenticationStage2Packet)) {
+    if (!(obj instanceof sendereCommons.protopackets.EncryptionCheckPacket)) {
       return super.equals(obj);
     }
-    sendereCommons.protopackets.AuthenticationStage2Packet other = (sendereCommons.protopackets.AuthenticationStage2Packet) obj;
+    sendereCommons.protopackets.EncryptionCheckPacket other = (sendereCommons.protopackets.EncryptionCheckPacket) obj;
 
-    if (!getPublicKey()
-        .equals(other.getPublicKey())) return false;
-    if (!getEncryptedSecret()
-        .equals(other.getEncryptedSecret())) return false;
+    if (!getEncrypted()
+        .equals(other.getEncrypted())) return false;
+    if (!getCleartext()
+        .equals(other.getCleartext())) return false;
+    if (getSenderTrusts()
+        != other.getSenderTrusts()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -181,78 +206,81 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + PUBLICKEY_FIELD_NUMBER;
-    hash = (53 * hash) + getPublicKey().hashCode();
-    hash = (37 * hash) + ENCRYPTEDSECRET_FIELD_NUMBER;
-    hash = (53 * hash) + getEncryptedSecret().hashCode();
+    hash = (37 * hash) + ENCRYPTED_FIELD_NUMBER;
+    hash = (53 * hash) + getEncrypted().hashCode();
+    hash = (37 * hash) + CLEARTEXT_FIELD_NUMBER;
+    hash = (53 * hash) + getCleartext().hashCode();
+    hash = (37 * hash) + SENDERTRUSTS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSenderTrusts());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(byte[] data)
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseDelimitedFrom(java.io.InputStream input)
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseDelimitedFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static sendereCommons.protopackets.AuthenticationStage2Packet parseFrom(
+  public static sendereCommons.protopackets.EncryptionCheckPacket parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -265,7 +293,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(sendereCommons.protopackets.AuthenticationStage2Packet prototype) {
+  public static Builder newBuilder(sendereCommons.protopackets.EncryptionCheckPacket prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -281,26 +309,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code AuthenticationStage2Packet}
+   * Protobuf type {@code EncryptionCheckPacket}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:AuthenticationStage2Packet)
-      sendereCommons.protopackets.AuthenticationStage2PacketOrBuilder {
+      // @@protoc_insertion_point(builder_implements:EncryptionCheckPacket)
+      sendereCommons.protopackets.EncryptionCheckPacketOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage2Packet_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_EncryptionCheckPacket_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage2Packet_fieldAccessorTable
+      return sendereCommons.protopackets.PacketProtos.internal_static_EncryptionCheckPacket_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              sendereCommons.protopackets.AuthenticationStage2Packet.class, sendereCommons.protopackets.AuthenticationStage2Packet.Builder.class);
+              sendereCommons.protopackets.EncryptionCheckPacket.class, sendereCommons.protopackets.EncryptionCheckPacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.AuthenticationStage2Packet.newBuilder()
+    // Construct using sendereCommons.protopackets.EncryptionCheckPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -318,9 +346,11 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      publicKey_ = com.google.protobuf.ByteString.EMPTY;
+      encrypted_ = com.google.protobuf.ByteString.EMPTY;
 
-      encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
+      cleartext_ = com.google.protobuf.ByteString.EMPTY;
+
+      senderTrusts_ = false;
 
       return this;
     }
@@ -328,17 +358,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return sendereCommons.protopackets.PacketProtos.internal_static_AuthenticationStage2Packet_descriptor;
+      return sendereCommons.protopackets.PacketProtos.internal_static_EncryptionCheckPacket_descriptor;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage2Packet getDefaultInstanceForType() {
-      return sendereCommons.protopackets.AuthenticationStage2Packet.getDefaultInstance();
+    public sendereCommons.protopackets.EncryptionCheckPacket getDefaultInstanceForType() {
+      return sendereCommons.protopackets.EncryptionCheckPacket.getDefaultInstance();
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage2Packet build() {
-      sendereCommons.protopackets.AuthenticationStage2Packet result = buildPartial();
+    public sendereCommons.protopackets.EncryptionCheckPacket build() {
+      sendereCommons.protopackets.EncryptionCheckPacket result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -346,10 +376,11 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public sendereCommons.protopackets.AuthenticationStage2Packet buildPartial() {
-      sendereCommons.protopackets.AuthenticationStage2Packet result = new sendereCommons.protopackets.AuthenticationStage2Packet(this);
-      result.publicKey_ = publicKey_;
-      result.encryptedSecret_ = encryptedSecret_;
+    public sendereCommons.protopackets.EncryptionCheckPacket buildPartial() {
+      sendereCommons.protopackets.EncryptionCheckPacket result = new sendereCommons.protopackets.EncryptionCheckPacket(this);
+      result.encrypted_ = encrypted_;
+      result.cleartext_ = cleartext_;
+      result.senderTrusts_ = senderTrusts_;
       onBuilt();
       return result;
     }
@@ -388,21 +419,24 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof sendereCommons.protopackets.AuthenticationStage2Packet) {
-        return mergeFrom((sendereCommons.protopackets.AuthenticationStage2Packet)other);
+      if (other instanceof sendereCommons.protopackets.EncryptionCheckPacket) {
+        return mergeFrom((sendereCommons.protopackets.EncryptionCheckPacket)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(sendereCommons.protopackets.AuthenticationStage2Packet other) {
-      if (other == sendereCommons.protopackets.AuthenticationStage2Packet.getDefaultInstance()) return this;
-      if (other.getPublicKey() != com.google.protobuf.ByteString.EMPTY) {
-        setPublicKey(other.getPublicKey());
+    public Builder mergeFrom(sendereCommons.protopackets.EncryptionCheckPacket other) {
+      if (other == sendereCommons.protopackets.EncryptionCheckPacket.getDefaultInstance()) return this;
+      if (other.getEncrypted() != com.google.protobuf.ByteString.EMPTY) {
+        setEncrypted(other.getEncrypted());
       }
-      if (other.getEncryptedSecret() != com.google.protobuf.ByteString.EMPTY) {
-        setEncryptedSecret(other.getEncryptedSecret());
+      if (other.getCleartext() != com.google.protobuf.ByteString.EMPTY) {
+        setCleartext(other.getCleartext());
+      }
+      if (other.getSenderTrusts() != false) {
+        setSenderTrusts(other.getSenderTrusts());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -419,11 +453,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      sendereCommons.protopackets.AuthenticationStage2Packet parsedMessage = null;
+      sendereCommons.protopackets.EncryptionCheckPacket parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (sendereCommons.protopackets.AuthenticationStage2Packet) e.getUnfinishedMessage();
+        parsedMessage = (sendereCommons.protopackets.EncryptionCheckPacket) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -433,70 +467,101 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private com.google.protobuf.ByteString publicKey_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString encrypted_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>bytes publicKey = 1;</code>
-     * @return The publicKey.
+     * <code>bytes encrypted = 1;</code>
+     * @return The encrypted.
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString getPublicKey() {
-      return publicKey_;
+    public com.google.protobuf.ByteString getEncrypted() {
+      return encrypted_;
     }
     /**
-     * <code>bytes publicKey = 1;</code>
-     * @param value The publicKey to set.
+     * <code>bytes encrypted = 1;</code>
+     * @param value The encrypted to set.
      * @return This builder for chaining.
      */
-    public Builder setPublicKey(com.google.protobuf.ByteString value) {
+    public Builder setEncrypted(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   
-      publicKey_ = value;
+      encrypted_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bytes publicKey = 1;</code>
+     * <code>bytes encrypted = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearPublicKey() {
+    public Builder clearEncrypted() {
       
-      publicKey_ = getDefaultInstance().getPublicKey();
+      encrypted_ = getDefaultInstance().getEncrypted();
       onChanged();
       return this;
     }
 
-    private com.google.protobuf.ByteString encryptedSecret_ = com.google.protobuf.ByteString.EMPTY;
+    private com.google.protobuf.ByteString cleartext_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>bytes encryptedSecret = 2;</code>
-     * @return The encryptedSecret.
+     * <code>bytes cleartext = 2;</code>
+     * @return The cleartext.
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString getEncryptedSecret() {
-      return encryptedSecret_;
+    public com.google.protobuf.ByteString getCleartext() {
+      return cleartext_;
     }
     /**
-     * <code>bytes encryptedSecret = 2;</code>
-     * @param value The encryptedSecret to set.
+     * <code>bytes cleartext = 2;</code>
+     * @param value The cleartext to set.
      * @return This builder for chaining.
      */
-    public Builder setEncryptedSecret(com.google.protobuf.ByteString value) {
+    public Builder setCleartext(com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   
-      encryptedSecret_ = value;
+      cleartext_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bytes encryptedSecret = 2;</code>
+     * <code>bytes cleartext = 2;</code>
      * @return This builder for chaining.
      */
-    public Builder clearEncryptedSecret() {
+    public Builder clearCleartext() {
       
-      encryptedSecret_ = getDefaultInstance().getEncryptedSecret();
+      cleartext_ = getDefaultInstance().getCleartext();
+      onChanged();
+      return this;
+    }
+
+    private boolean senderTrusts_ ;
+    /**
+     * <code>bool senderTrusts = 3;</code>
+     * @return The senderTrusts.
+     */
+    @java.lang.Override
+    public boolean getSenderTrusts() {
+      return senderTrusts_;
+    }
+    /**
+     * <code>bool senderTrusts = 3;</code>
+     * @param value The senderTrusts to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSenderTrusts(boolean value) {
+      
+      senderTrusts_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool senderTrusts = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSenderTrusts() {
+      
+      senderTrusts_ = false;
       onChanged();
       return this;
     }
@@ -513,41 +578,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:AuthenticationStage2Packet)
+    // @@protoc_insertion_point(builder_scope:EncryptionCheckPacket)
   }
 
-  // @@protoc_insertion_point(class_scope:AuthenticationStage2Packet)
-  private static final sendereCommons.protopackets.AuthenticationStage2Packet DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:EncryptionCheckPacket)
+  private static final sendereCommons.protopackets.EncryptionCheckPacket DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new sendereCommons.protopackets.AuthenticationStage2Packet();
+    DEFAULT_INSTANCE = new sendereCommons.protopackets.EncryptionCheckPacket();
   }
 
-  public static sendereCommons.protopackets.AuthenticationStage2Packet getDefaultInstance() {
+  public static sendereCommons.protopackets.EncryptionCheckPacket getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<AuthenticationStage2Packet>
-      PARSER = new com.google.protobuf.AbstractParser<AuthenticationStage2Packet>() {
+  private static final com.google.protobuf.Parser<EncryptionCheckPacket>
+      PARSER = new com.google.protobuf.AbstractParser<EncryptionCheckPacket>() {
     @java.lang.Override
-    public AuthenticationStage2Packet parsePartialFrom(
+    public EncryptionCheckPacket parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new AuthenticationStage2Packet(input, extensionRegistry);
+      return new EncryptionCheckPacket(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<AuthenticationStage2Packet> parser() {
+  public static com.google.protobuf.Parser<EncryptionCheckPacket> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<AuthenticationStage2Packet> getParserForType() {
+  public com.google.protobuf.Parser<EncryptionCheckPacket> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public sendereCommons.protopackets.AuthenticationStage2Packet getDefaultInstanceForType() {
+  public sendereCommons.protopackets.EncryptionCheckPacket getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

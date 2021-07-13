@@ -485,7 +485,7 @@ private static final long serialVersionUID = 0L;
               sendereCommons.protopackets.RemoteErrorPacket.class, sendereCommons.protopackets.RemoteErrorPacket.Builder.class);
     }
 
-    // Construct using SendereCommons.protopackets.RemoteErrorPacket.newBuilder()
+    // Construct using sendereCommons.protopackets.RemoteErrorPacket.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
