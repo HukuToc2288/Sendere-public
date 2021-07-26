@@ -70,6 +70,7 @@ class Main {
 
             override fun onSendResponse(allow: Boolean, transmission: TransmissionOut) {
                 if (allow) {
+                    transmission.start()
                     println("Передача " + transmission.id + " начата")
                 } else {
                     println("Передача " + transmission.id + " отклонена")
@@ -243,7 +244,6 @@ class Main {
                                     .setSignal(TransmissionControlPacket.Signal.SENDING_COMPLETE)
                                     .setTransmissionId(this.id)
                                     .build())
-                            onSuccess()
                         }
 
                         override fun onFail() {
