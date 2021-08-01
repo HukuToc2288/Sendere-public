@@ -157,12 +157,6 @@ abstract class RemoteUser {
                 var flags: Byte
                 var length: Int
                 try {
-//                        while (inputStream.available() < 4 && !disconnected) {
-////                            if (System.currentTimeMillis() > lastAliveTime + 5000)
-////                                RemoteUser.this.onDisconnectInternal();
-//                            System.out.println("waiting...");
-//                            Thread.sleep(2000);
-//                        }
                     var headerRead = 0
                     while (headerRead < 4 && !disconnected) {
                         headerRead += inputStream.read(packetLength, headerRead, 4 - headerRead)

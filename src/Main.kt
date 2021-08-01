@@ -71,7 +71,7 @@ class Main {
 
             override fun onSendResponse(allow: Boolean, transmission: TransmissionOut) {
                 if (allow) {
-                    transmission.start()
+                    Thread{transmission.start()}.start()
                     println("Передача " + transmission.id + " начата")
                 } else {
                     println("Передача " + transmission.id + " отклонена")
@@ -260,7 +260,6 @@ class Main {
 
                         private fun recursiveSend(currentRelativePath: String) {
                             val file = File("$rooDirectory/$currentRelativePath")
-                            println("file $file")
                             if (!file.exists()) return
                             if (file.isDirectory) {
                                 if (!sendere.createRemoteDirectory(currentRelativePath, this)) stop = true
