@@ -215,16 +215,9 @@ abstract class Sendere {
                 sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.INVALID_FORMAT, SendResponsePacket::class.java.simpleName)
                 return
             }
-            val transmission = transmissionsOut[packet.transmissionId]
+            val transmission = transmissionsOut.remove(packet.transmissionId)
             if (transmission != null) {
-                if (packet.accepted) {
-                    onSendResponse(true, transmission)
-                    val transmissionThread = Thread { transmission.start() }
-                    transmissionThread.start()
-                } else {
-                    onSendResponse(false, transmission)
-                    transmissionsOut.remove(packet.transmissionId)
-                }
+                    onSendResponse(packet.accepted, transmission)
             }
         } else if (anyPacket.`is`(CreateFilePacket::class.java)) {
             val packet: CreateFilePacket = try {
