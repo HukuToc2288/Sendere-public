@@ -5,6 +5,7 @@ import sendereCommons.protopackets.RawDataPacket
 import sendereCommons.protopackets.RemoteErrorPacket
 import sendereCommons.protopackets.TransmissionControlPacket
 import com.google.protobuf.ByteString
+import sun.rmi.runtime.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -238,6 +239,7 @@ class Main {
                     val transmission: TransmissionOut = object : TransmissionOut(tempUser, File(split[2]).isDirectory, split[2]) {
                         private val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
                         override fun start() {
+                            println("start")
                             deflater.setStrategy(Deflater.HUFFMAN_ONLY)
                             recursiveSend(filename)
                             sendere.sendMessage(user, 0.toByte(), TransmissionControlPacket.newBuilder()
@@ -258,6 +260,7 @@ class Main {
 
                         private fun recursiveSend(currentRelativePath: String) {
                             val file = File("$rooDirectory/$currentRelativePath")
+                            println("file $file")
                             if (!file.exists()) return
                             if (file.isDirectory) {
                                 if (!sendere.createRemoteDirectory(currentRelativePath, this)) stop = true

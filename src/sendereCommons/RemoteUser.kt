@@ -171,8 +171,6 @@ abstract class RemoteUser {
                             + (packetLength[1].toUByte().toInt() shl 8) +
                             + (packetLength[2].toUByte().toInt())
                    // length = (packetLength[0] + if (packetLength[0] >= 0) 0 else 256 shl 16) + (packetLength[1] + if (packetLength[1] >= 0) 0 else 256 shl 8) + packetLength[2] + if (packetLength[2] >= 0) 0 else 256
-                    if (length>0)
-                    println("receivedPacketLength: "+length)
                     //47 is '/' symbol's code
                     //18.09.2019
 //                    if(packetLength[3]!=47)
@@ -237,8 +235,7 @@ abstract class RemoteUser {
                 outputStream.write(flags.toInt())
                 if (length == 0) return true
                 outputStream.write(data)
-                if (length >0)
-                    println("SentPacketLength: "+length)
+                return true
             } catch (e: IOException) {
                 onDisconnectInternal()
             }
