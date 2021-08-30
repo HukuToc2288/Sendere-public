@@ -5,7 +5,7 @@ import sendereCommons.protopackets.RawDataPacket
 import sendereCommons.protopackets.RemoteErrorPacket
 import sendereCommons.protopackets.TransmissionControlPacket
 import com.google.protobuf.ByteString
-import sun.rmi.runtime.Log
+import sendereCommons.EventListener
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -14,81 +14,72 @@ import java.net.InetAddress
 import java.util.*
 import java.util.zip.Deflater
 import kotlin.experimental.or
+import kotlin.system.exitProcess
 
 class Main {
-    private lateinit var sendere: Sendere
     private lateinit var scanner: Scanner
     private var question = false
-    private val authenticationQuestion = false
-    private val allow = false
     private var tempInRequest: InRequest? = null
-    private val blacklistIPs = HashSet<String>()
     fun main(args: Array<String?>?) {
         try {
             Settings.nickname = (System.getProperty("user.name") + "@" + InetAddress.getLocalHost().hostName)
         } catch (e: Exception) {
             //Keep default
         }
-        println("Сбор даннных о сетевых интерфесах...")
+        println("Сбор данных о сетевых интерфейсах...")
         NetworkList.updateList()
-        if (NetworkList.getNetworkList().size == 0) {
-            println("Ваше устройство не педключено ни к одной сети")
-            System.exit(0)
+        if (NetworkList.getNetworkList().isEmpty()) {
+            println("Ваше устройство не подключено ни к одной сети")
+            exitProcess(0)
         }
         println("Инициализация сервиса...")
-        sendere = object : Sendere() {
-            override fun onAuthenticationRequestReceived(secret: Long) {}
-            override fun onRemoteErrorReceived(user: RemoteUser, errorType: RemoteErrorPacket.ErrorType?, extraMessage: String?) {
-                var errorDescription: String? = null
-                errorDescription = when (errorType) {
+        Sendere.addEventListener(object : EventListener(){
+            override fun onRemoteErrorReceived(remoteUser: RemoteUser, errorType: RemoteErrorPacket.ErrorType, extraMessage: String?) {
+                val errorDescription: String = when (errorType) {
                     RemoteErrorPacket.ErrorType.NOT_PROTOBUF -> "Пакет не в формате protobuf"
                     RemoteErrorPacket.ErrorType.INVALID_FORMAT -> "Формат пакета на удалённом уст-ве отличается от передаваемого: $extraMessage"
                     RemoteErrorPacket.ErrorType.UNRECOGNIZED_PACKET -> "Удалённое уст-во не может обрабатывать данный тип пакета: $extraMessage"
                     RemoteErrorPacket.ErrorType.CHAT_NOT_ALLOWED -> "Удалённый пользователь запрещает приём текстовых сообщений"
                     else -> "Неизвестная ошибка: $extraMessage"
                 }
-                System.err.printf("Ошибка от пользоватля %s [%d]: %s\r\n", user, sendere!!.remoteUsers!!.indexOf(user), errorDescription)
+                System.err.printf("Ошибка от пользователя %s [%d]: %s\r\n", remoteUser, Sendere.remoteUsers.indexOf(remoteUser), errorDescription)
             }
 
-            override fun onRemoteUserUpdated(user: RemoteUser) {}
-            override fun onRemoteUserConnected(user: RemoteUser) {
-                println("Подключился пользователь " + user.nickname + " [" + sendere!!.remoteUsers!!.indexOf(user) + "]")
+            override fun onRemoteUserUpdated(remoteUser: RemoteUser) {}
+            override fun onRemoteUserConnected(remoteUser: RemoteUser) {
+                println("Подключился пользователь " + remoteUser.nickname + " [" + Sendere.remoteUsers.indexOf(remoteUser) + "]")
             }
 
-            override fun onRemoteUserFound(user: RemoteUser) {
-                println("Обнаружен пользователь " + user.nickname + " [" + sendere!!.remoteUsers!!.indexOf(user) + "]")
+            override fun onRemoteUserFound(remoteUser: RemoteUser) {
+                println("Обнаружен пользователь " + remoteUser.nickname + " [" + Sendere.remoteUsers.indexOf(remoteUser) + "]")
             }
 
-            override fun onTextMessageReceived(who: RemoteUser, message: String?) {
-                println("Сообщение от пользователя " + who.nickname + " [" + sendere!!.remoteUsers!!.indexOf(who) + "] : " + message)
+            override fun onTextMessageReceived(remoteUser: RemoteUser, message: String) {
+                println("Сообщение от пользователя " + remoteUser.nickname + " [" + Sendere.remoteUsers.indexOf(remoteUser) + "] : " + message)
             }
 
-            override fun onSendRequest(request: InRequest) {
-                println(String.format("Пользователь %s [%d] хочет передать вам %s %s. Принять?", request.who, sendere!!.remoteUsers!!.indexOf(request.who), if (request.isDirectory) "директорию" else "файл", request.filename))
+            override fun onSendRequestReceived(remoteUser: RemoteUser, request: InRequest) {
+                println(String.format("Пользователь %s [%d] хочет передать вам %s %s. Принять?", request.who, Sendere.remoteUsers.indexOf(request.who), if (request.isDirectory) "директорию" else "файл", request.filename))
                 tempInRequest = request
                 question = true
             }
 
-            override fun onSendResponse(allow: Boolean, transmission: TransmissionOut) {
+            override fun onSendResponseReceived(remoteUser: RemoteUser, transmissionOut: TransmissionOut, allow: Boolean) {
                 if (allow) {
-                    Thread{transmission.start()}.start()
-                    println("Передача " + transmission.id + " начата")
+                    Thread{transmissionOut.start()}.start()
+                    println("Передача " + transmissionOut.id + " начата")
                 } else {
-                    println("Передача " + transmission.id + " отклонена")
+                    println("Передача " + transmissionOut.id + " отклонена")
                 }
             }
 
-            override fun onUserDisconnected(remoteUser: RemoteUser) {
-                println("Пользователь " + remoteUser.nickname + " [" + sendere!!.remoteUsers!!.indexOf(remoteUser) + "] отключился")
+            override fun onRemoteUserDisconnected(remoteUser: RemoteUser) {
+                println("Пользователь " + remoteUser.nickname + " [" + Sendere.remoteUsers.indexOf(remoteUser) + "] отключился")
             }
 
-            override fun onInternalError(code: Int, message: String?) {
-                if (code == 1) {
-                    println("Поиск в данной сети может занять большое время. Рекомендуем ввести IP-адрес вручную ($message)")
-                }
-            }
-        }
-        println("Sendere запущен на порту " + sendere.mainPort)
+
+        })
+        println("Sendere запущен на порту " + Sendere.mainPort)
         println("Поиск устройств в сети...")
         println("")
         scanner = Scanner(System.`in`)
@@ -97,125 +88,129 @@ class Main {
                 println("Введите команду")
                 val line = readLine().trim { it <= ' ' }
                 if (question) {
-                    if (line == "yes") {
-                        question = false
-                        val transmission: TransmissionIn = object : TransmissionIn(tempInRequest!!.who, tempInRequest!!.transmissionId) {
-                            private var writer: FileOutputStream? = null
-                            var startTime = System.currentTimeMillis()
-                            var totalBytesReceived: Long = 0
-                            override fun createDirectory(relativePath: String?): Boolean {
-                                return try {
-                                    var i = 2
-                                    var tempPath = "$rootDir/$relativePath"
-                                    while (File(tempPath).exists()) {
-                                        tempPath = rootDir + "/" + relativePath + i++
+                    when (line) {
+                        "yes" -> {
+                            question = false
+                            val transmission: TransmissionIn = object : TransmissionIn(tempInRequest!!.who, tempInRequest!!.transmissionId) {
+                                private var writer: FileOutputStream? = null
+                                var startTime = System.currentTimeMillis()
+                                var totalBytesReceived: Long = 0
+                                override fun createDirectory(relativePath: String): Boolean {
+                                    return try {
+                                        var i = 2
+                                        var tempPath = "$rootDir/$relativePath"
+                                        while (File(tempPath).exists()) {
+                                            tempPath = rootDir + "/" + relativePath + i++
+                                        }
+                                        File(tempPath).mkdir()
+                                    } catch (e: Exception) {
+                                        false
                                     }
-                                    File(tempPath).mkdir()
-                                } catch (e: Exception) {
-                                    false
                                 }
-                            }
 
-                            override fun createFile(relativePath: String?): Boolean {
-                                return try {
-                                    var i = 2
-                                    var tempPath = "$rootDir/$relativePath"
-                                    while (File(tempPath).exists()) {
-                                        tempPath = rootDir + "/" + relativePath + i++
+                                override fun createFile(relativePath: String): Boolean {
+                                    return try {
+                                        var i = 2
+                                        var tempPath = "$rootDir/$relativePath"
+                                        while (File(tempPath).exists()) {
+                                            tempPath = rootDir + "/" + relativePath + i++
+                                        }
+                                        val file = File(tempPath)
+                                        if (!file.createNewFile()) return false
+                                        writer = FileOutputStream(file)
+                                        true
+                                    } catch (e: Exception) {
+                                        false
                                     }
-                                    val file = File(tempPath)
-                                    if (!file.createNewFile()) return false
-                                    writer = FileOutputStream(file)
-                                    true
-                                } catch (e: Exception) {
-                                    false
+                                }
+
+                                override fun writeToFile(data: ByteArray, off: Int, len: Int): Boolean {
+                                    try {
+                                        writer!!.write(data, off, len)
+                                    } catch (e: IOException) {
+                                        e.printStackTrace()
+                                        return false
+                                    }
+                                    totalBytesReceived += len - off.toLong()
+                                    return true
+                                }
+
+                                override fun closeFile(): Boolean {
+                                    return try {
+                                        writer!!.close()
+                                        true
+                                    } catch (e: IOException) {
+                                        false
+                                    }
+                                }
+
+                                override fun onUpdateTransmissionSize(size: Long) {}
+                                override fun onDone() {
+                                    val totalTime = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+                                    println(String.format("Приём %1\$s успешно завершён", id))
+                                    println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", totalBytesReceived.toDouble() / 1024 / 1024 / totalTime, realData.toDouble() / 1024 / 1024 / totalTime))
                                 }
                             }
-
-                            override fun writeToFile(data: ByteArray?, off: Int, len: Int): Boolean {
-                                try {
-                                    writer!!.write(data, off, len)
-                                } catch (e: IOException) {
-                                    e.printStackTrace()
-                                    return false
-                                }
-                                totalBytesReceived += len - off.toLong()
-                                return true
-                            }
-
-                            override fun closeFile(): Boolean {
-                                return try {
-                                    writer!!.close()
-                                    true
-                                } catch (e: IOException) {
-                                    false
-                                }
-                            }
-
-                            override fun onUpdateTransmissionSize(size: Long) {}
-                            override fun onDone() {
-                                val totalTime = ((System.currentTimeMillis() - startTime) / 1000).toInt()
-                                println(String.format("Приём %1\$s успешно завершён", id))
-                                println(String.format("Средняя скорость приёма %.2f МБ/с при средней скорости сети %.2f МБ/с", totalBytesReceived.toDouble() / 1024 / 1024 / totalTime, realData.toDouble() / 1024 / 1024 / totalTime))
-                            }
+                            Sendere.processSendRequest(true, transmission)
+                            println("Приём начат с идентификатором " + transmission.id)
                         }
-                        sendere.processSendRequest(true, transmission)
-                        println("Приём начат с идентификатором " + transmission.id)
-                    } else if (line == "no") {
-                        question = false
-                        sendere.processSendRequest(false, createDummyTransmission(tempInRequest!!.who, tempInRequest!!.transmissionId))
-                        println("Приём отклонён")
-                    } else {
-                        println("Ответьте yes или no")
+                        "no" -> {
+                            question = false
+                            Sendere.processSendRequest(false, createDummyTransmission(tempInRequest!!.who, tempInRequest!!.transmissionId))
+                            println("Приём отклонён")
+                        }
+                        else -> {
+                            println("Ответьте yes или no")
+                        }
                     }
                     continue
                 }
                 if (line == "who") {
-                    if (sendere.remoteUsers!!.size == 0) {
-                        println("Сейчас в лоакльной сети никого. Если это не так, убедитесь, что устройства находятся в одной локальной сети")
+                    if (Sendere.remoteUsers.size == 0) {
+                        println("Сейчас в локальной сети никого. Если это не так, убедитесь, что устройства находятся в одной локальной сети")
                         println("")
                         continue
                     }
                     println("Пользователи в сети:")
                     println("")
-                    val users = sendere.remoteUsers
-                    for (i in users!!.indices) {
+                    val users = Sendere.remoteUsers
+                    for (i in users.indices) {
                         if (users[i] == null) continue
                         println("Пользователь $i:")
                         println("Хэш-сумма:" + users[i].hash)
                         println("Никнейм: " + users[i].nickname)
-                        println("Локальнй адрес: " + users[i].address)
+                        println("Локальный адрес: " + users[i].address)
                         println("")
                     }
                 } else if (line.startsWith("tell ") && line.split(" ".toRegex()).toTypedArray().size >= 3) {
                     val split = line.split(" ".toRegex(), 3).toTypedArray()
                     var tempUser: RemoteUser?
                     try {
-                        tempUser = sendere.remoteUsers!![split[1].toInt()]
+                        tempUser = Sendere.remoteUsers[split[1].toInt()]
                         if (tempUser == null) throw Exception()
                     } catch (e: Exception) {
                         println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка")
                         continue
                     }
-                    sendere.sendTextMessage(tempUser, split[2])
+                    Sendere.sendTextMessage(tempUser, split[2])
                     println("Сообщение отправлено")
                     if (!Settings.allowChat) println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ")
                 } else if (line.startsWith("speed ") && line.split(" ".toRegex()).toTypedArray().size == 2) {
                     val split = line.split(" ".toRegex(), 3).toTypedArray()
                     var tempUser: RemoteUser?
                     try {
-                        tempUser = sendere.remoteUsers!![split[1].toInt()]
+                        tempUser = Sendere.remoteUsers[split[1].toInt()]
                         if (tempUser == null) throw Exception()
                     } catch (e: Exception) {
                         println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка")
                         continue
                     }
-                    println("Замеряем скорость с пользователем " + sendere.remoteUsers!![split[1].toInt()] + " [" + split[1] + "]...")
+                    println("Замеряем скорость с пользователем " + Sendere.remoteUsers[split[1].toInt()] + " [" + split[1] + "]...")
                     val testDuration = 10
                     val endTime = System.currentTimeMillis() + testDuration * 1000
                     var packetsSend = 0
                     while (System.currentTimeMillis() < endTime) {
-                        sendere.sendMessage(tempUser, 4.toByte(), RawDataPacket.newBuilder().setTransmissionId(0)
+                        Sendere.sendMessage(tempUser, 4.toByte(), RawDataPacket.newBuilder().setTransmissionId(0)
                                 .setData(ByteString.copyFrom(ByteArray(1048572))).build())
                         packetsSend++
                     }
@@ -224,7 +219,7 @@ class Main {
                     val split = line.split(" ".toRegex(), 3).toTypedArray()
                     var tempUser: RemoteUser?
                     try {
-                        tempUser = sendere.remoteUsers!![split[1].toInt()]
+                        tempUser = Sendere.remoteUsers[split[1].toInt()]
                         if (tempUser == null) throw Exception()
                     } catch (e: Exception) {
                         println("Пользователь с номером \"" + split[1] + "\" не найден. Введите /who для получения списка")
@@ -242,7 +237,7 @@ class Main {
                             println("start")
                             deflater.setStrategy(Deflater.HUFFMAN_ONLY)
                             recursiveSend(filename)
-                            sendere.sendMessage(user, 0.toByte(), TransmissionControlPacket.newBuilder()
+                            Sendere.sendMessage(user, 0.toByte(), TransmissionControlPacket.newBuilder()
                                     .setSignal(TransmissionControlPacket.Signal.SENDING_COMPLETE)
                                     .setTransmissionId(this.id)
                                     .build())
@@ -262,14 +257,14 @@ class Main {
                             val file = File("$rooDirectory/$currentRelativePath")
                             if (!file.exists()) return
                             if (file.isDirectory) {
-                                if (!sendere.createRemoteDirectory(currentRelativePath, this)) stop = true
+                                if (!Sendere.createRemoteDirectory(currentRelativePath, this)) stop = true
                                 if (stop) return
-                                for (name in file.list()) {
+                                for (name in file.list()!!) {
                                     recursiveSend("$currentRelativePath/$name")
                                 }
                             } else {
                                 try {
-                                    sendere.createRemoteFile(currentRelativePath, this)
+                                    Sendere.createRemoteFile(currentRelativePath, this)
                                     val `in` = FileInputStream(file)
                                     val data = ByteArray(1024 * 1024 / 8)
                                     var dataLength: Int
@@ -279,14 +274,14 @@ class Main {
                                         if (Settings.allowGzip) {
                                             flags = flags or 1
                                         }
-                                        sendere.sendMessage(user, flags, RawDataPacket.newBuilder()
+                                        Sendere.sendMessage(user, flags, RawDataPacket.newBuilder()
                                                 .setTransmissionId(this.id)
                                                 .setData(ByteString.copyFrom(data, 0, dataLength))
                                                 .build())
                                         if (stop) return
                                     }
-                                    sendere.sendMessage(user, 0.toByte(), CloseFilePacket.newBuilder().setTransmissionId(this.id).build())
-                                    //sendere.sendMessage(user, Headers.CLOSE_FILE, String.valueOf(id));
+                                    Sendere.sendMessage(user, 0.toByte(), CloseFilePacket.newBuilder().setTransmissionId(this.id).build())
+                                    //Sendere.sendMessage(user, Headers.CLOSE_FILE, String.valueOf(id));
                                 } catch (e: IOException) {
                                     e.printStackTrace()
                                     stop = true
@@ -294,15 +289,15 @@ class Main {
                             }
                         }
                     }
-                    sendere.addTransmissionOut(transmission)
-                    sendere.sendTransmissionRequest(transmission)
+                    Sendere.addTransmissionOut(transmission)
+                    Sendere.sendTransmissionRequest(transmission)
                 } else if (line.startsWith("auth")) {
                     println("Сопряжение с пользователем huku@Tomahawk [0]")
                     println("Код сопряжения от удалённого устройства - 324098")
                     println("Внимательно проверьте совпадение кодов сопряжения на обеих устройствах!")
                     println("Коды совпадают?")
                     scanner.nextLine()
-                    println("Установка зазищённого соединения...")
+                    println("Установка защищённого соединения...")
                     println("Защищённое соединение установлено")
                 } else {
                     println("Команда не распознана")
@@ -313,7 +308,7 @@ class Main {
         consoleThread.start()
     }
 
-    fun readLine(): String {
+    private fun readLine(): String {
         return scanner.nextLine()
     }
 }

@@ -19,12 +19,12 @@ class LegacyGUI {
 
     var addrezz = 23;
 
-    fun init(){
+    fun init() {
 
         try {
             // Set System L&F
             UIManager.setLookAndFeel(
-                    UIManager.getSystemLookAndFeelClassName())
+                UIManager.getSystemLookAndFeelClassName())
         } catch (e: UnsupportedLookAndFeelException) {
             // handle exception
         } catch (e: ClassNotFoundException) {
@@ -81,81 +81,81 @@ class LegacyGUI {
         mainWindow.isVisible = true
 
         NetworkList.updateList()
-        sendere = object: Sendere(){
-            override fun onAuthenticationRequestReceived(secret: Long) {
-                TODO("Not yet implemented")
-            }
-
-            override fun onRemoteErrorReceived(user: RemoteUser, errorType: RemoteErrorPacket.ErrorType?, extraMessage: String?) {
-                TODO("Not yet implemented")
-            }
-
-            override fun onRemoteUserUpdated(user: RemoteUser) {
-
-            }
-
-            override fun onRemoteUserConnected(user: RemoteUser) {
-                println("user connected")
-                val userPanel = createUserPanel(user)
-                userPanel.background = UIManager.getColor("List.background")
-                userPanel.isOpaque = true
-                userPanel.addMouseListener(object : MouseAdapter() {
-                    override fun mouseClicked(mouseEvent: MouseEvent) {
-                        super.mouseClicked(mouseEvent)
-                        if (previousSelection != null)
-                            previousSelection!!.background = UIManager.getColor("List.background")
-                        previousSelection = userPanel
-                        userPanel.background = UIManager.getColor("List.selectionBackground")
-                        //userPanel.setOpaque(true);
-                    }
-                })
-                compsToExperiment.add(userPanel)
-                compsToExperiment.revalidate()
-                usersEntries.put(user, userPanel)
-            }
-
-            override fun onRemoteUserFound(user: RemoteUser) {
-                println("user found")
-                val userPanel = createUserPanel(user)
-                userPanel.background = UIManager.getColor("List.background")
-                userPanel.isOpaque = true
-                userPanel.addMouseListener(object : MouseAdapter() {
-                    override fun mouseClicked(mouseEvent: MouseEvent) {
-                        super.mouseClicked(mouseEvent)
-                        if (previousSelection != null)
-                            previousSelection!!.background = UIManager.getColor("List.background")
-                        previousSelection = userPanel
-                        userPanel.background = UIManager.getColor("List.selectionBackground")
-                        //userPanel.setOpaque(true);
-                    }
-                })
-                compsToExperiment.add(userPanel)
-                compsToExperiment.revalidate()
-                usersEntries.put(user, userPanel)
-            }
-
-            override fun onTextMessageReceived(who: RemoteUser, message: String?) {
-            }
-
-            override fun onSendRequest(request: InRequest) {
-
-            }
-
-            override fun onSendResponse(allow: Boolean, transmission: TransmissionOut) {
-
-            }
-
-            override fun onUserDisconnected(remoteUser: RemoteUser) {
-
-                compsToExperiment.remove(usersEntries.remove(remoteUser))
-                compsToExperiment.revalidate()
-            }
-
-            override fun onInternalError(code: Int, message: String?) {
-
-            }
-        }
-        //compsToExperiment.add(createTransmissionPanel("HukuToc2288",69, "zen_installer-2020.05.06-x86_64.iso"))
+//        sendere = object: Sendere(){
+//            override fun onAuthenticationRequestReceived(secret: Long) {
+//                TODO("Not yet implemented")
+//            }
+//
+//            override fun onRemoteErrorReceived(user: RemoteUser, errorType: RemoteErrorPacket.ErrorType?, extraMessage: String?) {
+//                TODO("Not yet implemented")
+//            }
+//
+//            override fun onRemoteUserUpdated(user: RemoteUser) {
+//
+//            }
+//
+//            override fun onRemoteUserConnected(user: RemoteUser) {
+//                println("user connected")
+//                val userPanel = createUserPanel(user)
+//                userPanel.background = UIManager.getColor("List.background")
+//                userPanel.isOpaque = true
+//                userPanel.addMouseListener(object : MouseAdapter() {
+//                    override fun mouseClicked(mouseEvent: MouseEvent) {
+//                        super.mouseClicked(mouseEvent)
+//                        if (previousSelection != null)
+//                            previousSelection!!.background = UIManager.getColor("List.background")
+//                        previousSelection = userPanel
+//                        userPanel.background = UIManager.getColor("List.selectionBackground")
+//                        //userPanel.setOpaque(true);
+//                    }
+//                })
+//                compsToExperiment.add(userPanel)
+//                compsToExperiment.revalidate()
+//                usersEntries.put(user, userPanel)
+//            }
+//
+//            override fun onRemoteUserFound(user: RemoteUser) {
+//                println("user found")
+//                val userPanel = createUserPanel(user)
+//                userPanel.background = UIManager.getColor("List.background")
+//                userPanel.isOpaque = true
+//                userPanel.addMouseListener(object : MouseAdapter() {
+//                    override fun mouseClicked(mouseEvent: MouseEvent) {
+//                        super.mouseClicked(mouseEvent)
+//                        if (previousSelection != null)
+//                            previousSelection!!.background = UIManager.getColor("List.background")
+//                        previousSelection = userPanel
+//                        userPanel.background = UIManager.getColor("List.selectionBackground")
+//                        //userPanel.setOpaque(true);
+//                    }
+//                })
+//                compsToExperiment.add(userPanel)
+//                compsToExperiment.revalidate()
+//                usersEntries.put(user, userPanel)
+//            }
+//
+//            override fun onTextMessageReceived(who: RemoteUser, message: String?) {
+//            }
+//
+//            override fun onSendRequest(request: InRequest) {
+//
+//            }
+//
+//            override fun onSendResponse(allow: Boolean, transmission: TransmissionOut) {
+//
+//            }
+//
+//            override fun onUserDisconnected(remoteUser: RemoteUser) {
+//
+//                compsToExperiment.remove(usersEntries.remove(remoteUser))
+//                compsToExperiment.revalidate()
+//            }
+//
+//            override fun onInternalError(code: Int, message: String?) {
+//
+//            }
+//        }
+//        //compsToExperiment.add(createTransmissionPanel("HukuToc2288",69, "zen_installer-2020.05.06-x86_64.iso"))
     }
 
     fun createUserPanel(user: RemoteUser): JPanel {

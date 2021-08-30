@@ -1,23 +1,15 @@
 package sendereCommons
 
-import lombok.Data
-import lombok.Getter
-import lombok.Setter
+
 import lombok.SneakyThrows
-import sendereCommons.Sendere.Companion.decrypt
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 import java.net.SocketException
-import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
-import java.security.PublicKey
-import java.security.spec.X509EncodedKeySpec
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.BlockingQueue
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
 import javax.crypto.interfaces.DHPublicKey
@@ -261,7 +253,4 @@ abstract class RemoteUser {
     override fun hashCode(): Int {
         return Objects.hash(nickname, hash)
     }
-
-    @Data
-    private class SendingQueueElement(private val length: Int, private val flags: Byte, private val datas: Array<ByteArray>)
 }

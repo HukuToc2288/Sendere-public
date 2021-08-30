@@ -1,4 +1,4 @@
-package sendereCommons;
+package testificate;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

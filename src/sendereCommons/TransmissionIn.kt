@@ -19,14 +19,14 @@ abstract class TransmissionIn @JvmOverloads constructor(val user: RemoteUser, va
      * @param relativePath file path relative to root transmission's directory
      * @return `true` on success, if returned `false` operation should be terminated
      */
-    abstract fun createDirectory(relativePath: String?): Boolean
+    abstract fun createDirectory(relativePath: String): Boolean
 
     /**
      * Calls when sender requested to create file
      * @param relativePath file path relative to root transmission's directory
      * @return `true` on success, if returned `false` operation should be terminated
      */
-    abstract fun createFile(relativePath: String?): Boolean
+    abstract fun createFile(relativePath: String): Boolean
 
     /**
      * Calls when Sendere received raw data that should be written to opened file
@@ -34,7 +34,7 @@ abstract class TransmissionIn @JvmOverloads constructor(val user: RemoteUser, va
      * @param len count of bytes from array that should be written
      * @return `true` on success, if returned `false` operation should be terminated
      */
-    abstract fun writeToFile(data: ByteArray?, off: Int, len: Int): Boolean
+    abstract fun writeToFile(data: ByteArray, off: Int, len: Int): Boolean
 
     /**
      * Calls when need to close file that was opened early by [.createFile]
@@ -73,15 +73,15 @@ abstract class TransmissionIn @JvmOverloads constructor(val user: RemoteUser, va
         @JvmStatic
         fun createDummyTransmission(user: RemoteUser, id: Long): TransmissionIn {
             return object : TransmissionIn(user, id) {
-                override fun createDirectory(relativePath: String?): Boolean {
+                override fun createDirectory(relativePath: String): Boolean {
                     return false
                 }
 
-                override fun createFile(relativePath: String?): Boolean {
+                override fun createFile(relativePath: String): Boolean {
                     return false
                 }
 
-                override fun writeToFile(data: ByteArray?, off: Int, len: Int): Boolean {
+                override fun writeToFile(data: ByteArray, off: Int, len: Int): Boolean {
                     return false
                 }
 
