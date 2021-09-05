@@ -46,5 +46,8 @@ object Settings {
 
     // TODO document it
     // 29.06.2020 huku
-    val allowGzip = true
+
+    // do not set it to "true" – compressing algorithm broken for now
+    // 31.08.2021
+    val allowGzip = false
 }

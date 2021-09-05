@@ -64,33 +64,15 @@ object Sendere {
     const val MINOR_VERSION = 1
     const val VERSION = MAJOR_VERSION shl 16 + MIDDLE_VERSION shl 8 + MINOR_VERSION
 
-    const val DEFAULT_FLAGS: Byte = 0
 
-    @JvmStatic
-    @Throws(
-        InvalidKeyException::class,
-        NoSuchPaddingException::class,
-        NoSuchAlgorithmException::class,
-        BadPaddingException::class,
-        IllegalBlockSizeException::class
-    )
-    fun decrypt(data: ByteArray?, publicKey: PublicKey?): Long {
-        val cipher = Cipher.getInstance("RSA")
-        cipher.init(Cipher.DECRYPT_MODE, publicKey)
-        return Converters.bytesToLong(cipher.doFinal(data))
-    }
+    object PacketFlags {
+        @Deprecated("No way man! Do not even dare to use it! Implemented compression algorithm seems to be laggy, buggy and cursed")
+        // TODO: huku 31.08.2021 uncurse compressing algorithm
+        const val COMPRESSED: Byte = 0x01
+        const val ENCRYPTED: Byte = 0x02
 
-    @Throws(
-        InvalidKeyException::class,
-        NoSuchPaddingException::class,
-        NoSuchAlgorithmException::class,
-        BadPaddingException::class,
-        IllegalBlockSizeException::class
-    )
-    fun encrypt(secret: Long, publicKey: PublicKey?): ByteArray {
-        val cipher = Cipher.getInstance("RSA")
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey)
-        return cipher.doFinal(Converters.longToBytes(secret))
+        const val NO_FLAGS: Byte = 0
+        const val DEFAULT_FLAGS: Byte = ENCRYPTED
     }
 
 
@@ -114,14 +96,16 @@ object Sendere {
         var data = data
         if (data.isEmpty()) return
         val compressedDataLength = data.size
+        if (flags and 2 != 0.toByte()) {
+            data = sender.decrypt(data)
+        }
         if (flags and 1 != 0.toByte()) {
             data = inflate(data)
         }
-        val anyPacket: Any
-        anyPacket = try {
+        val anyPacket: Any = try {
             Any.parseFrom(data)
         } catch (e: InvalidProtocolBufferException) {
-            sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.NOT_PROTOBUF)
+            sendErrorMessage(sender, RemoteErrorPacket.ErrorType.NOT_PROTOBUF)
             return
         }
         if (anyPacket.`is`(PingPacket::class.java)) {
@@ -132,6 +116,7 @@ object Sendere {
             }
             val remoteSUID = packet.suid
             val remoteNick = packet.nickname
+            val shouldAnswer = packet.shouldAnswer
             // self-ping
             // 11.04.2021 huku
             if (remoteSUID == SUID && remoteNick == nickname) return
@@ -141,35 +126,18 @@ object Sendere {
             } else {
                 sender.identify(remoteNick, remoteSUID)
                 remoteUsers.put(sender)
-                onRemoteUserConnected(sender)
-                if (visibility == 1) {
-                    val byteSUID = Converters.longToBytes(SUID)
-                    val byteNickname = nickname.toByteArray(StandardCharsets.UTF_8)
-                    val nicknameLength = byteArrayOf(byteNickname.size.toByte())
-                    sendMessage(sender, 0.toByte(), PongPacket.newBuilder().setSuid(SUID).setNickname(nickname).build())
+                if (shouldAnswer) {
+                    onRemoteUserConnected(sender)
+                    if (visibility == 1) {
+                        sendMessage(sender, PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
+                            .setShouldAnswer(false)
+                            .build(), PacketFlags.NO_FLAGS)
+                    }
+                } else {
+                    onRemoteUserFound(sender)
+                    startDiffieHellman(sender)
                 }
-            }
-        } else if (anyPacket.`is`(PongPacket::class.java)) {
-            val packetType = PongPacket::class.java
-            val packet = anyPacket.unpackOrNull(packetType) ?: run {
-                sendInvalidFormatErrorMessage(sender, packetType)
-                return
-            }
-            val remoteSUID = packet.suid
-            val remoteNick = packet.nickname
-            // self-ping
-            // 11.04.2021 huku
-            // self-ping
-            // 11.04.2021 huku
-            if (remoteSUID == SUID && remoteNick == nickname) return
-            val existingUser = remoteUsers.getByHash(remoteSUID)
-            if (existingUser != null) {
-                onRemoteUserUpdated(existingUser)
-            } else {
-                sender.identify(remoteNick, remoteSUID)
-                remoteUsers.put(sender)
-                onRemoteUserFound(sender)
-                startDiffieHellman(sender)
+
             }
         } else if (anyPacket.`is`(RemoteErrorPacket::class.java)) {
             val packetType = RemoteErrorPacket::class.java
@@ -188,7 +156,7 @@ object Sendere {
             if (Settings.allowReceiving) {
                 onTextMessageReceived(sender, packet.text)
             } else {
-                sendErrorMessage(sender, 0.toByte(), RemoteErrorPacket.ErrorType.CHAT_NOT_ALLOWED)
+                sendErrorMessage(sender, RemoteErrorPacket.ErrorType.CHAT_NOT_ALLOWED)
             }
         } else if (anyPacket.`is`(SendRequestPacket::class.java)) {
             val packetType = SendRequestPacket::class.java
@@ -222,7 +190,7 @@ object Sendere {
             }
             val transmission = transmissionsOut.remove(packet.transmissionId)
             if (transmission != null) {
-                onSendResponseReceived(sender, transmission,packet.accepted)
+                onSendResponseReceived(sender, transmission, packet.accepted)
             }
         } else if (anyPacket.`is`(CreateFilePacket::class.java)) {
             val packetType = CreateFilePacket::class.java
@@ -313,7 +281,7 @@ object Sendere {
                     .setSenderGeneratedSecret(true)
                     .setIv(ByteString.copyFrom(ivBytes))
                     .build()
-                sendMessage(sender, diffieHellmanPacket)
+                sendMessage(sender, diffieHellmanPacket, PacketFlags.NO_FLAGS)
             } else {
                 val aliceKeyFac = KeyFactory.getInstance("DH")
                 val x509KeySpec = X509EncodedKeySpec(encodedKey)
@@ -329,7 +297,7 @@ object Sendere {
                     .setEncrypted(ByteString.copyFrom(encrypted))
                     .setSenderTrusts(false)
                     .build()
-                sendMessage(sender, encryptionCheckPacket)
+                sendMessage(sender, encryptionCheckPacket, PacketFlags.NO_FLAGS)
 
             }
         } else if (anyPacket.`is`(EncryptionCheckPacket::class.java)) {
@@ -361,7 +329,6 @@ object Sendere {
         } else {
             sendErrorMessage(
                 sender,
-                flags,
                 RemoteErrorPacket.ErrorType.UNRECOGNIZED_PACKET,
                 anyPacket.initializationErrorString
             )
@@ -379,21 +346,23 @@ object Sendere {
     private fun <T : Message> sendInvalidFormatErrorMessage(remoteUser: RemoteUser, packetType: Class<T>): Boolean {
         return sendErrorMessage(
             remoteUser,
-            DEFAULT_FLAGS,
             RemoteErrorPacket.ErrorType.INVALID_FORMAT,
             packetType.simpleName
         )
     }
 
-    public fun addEventListener(listener: EventListener) {
+    @Suppress("unused")
+    fun addEventListener(listener: EventListener) {
         eventListeners.add(listener)
     }
 
-    public fun removeEventListener(listener: EventListener) {
+    @Suppress("unused")
+    fun removeEventListener(listener: EventListener) {
         eventListeners.remove(listener)
     }
 
-    public fun removeAllEventListeners() {
+    @Suppress("unused")
+    fun removeAllEventListeners() {
         eventListeners.clear()
     }
 
@@ -429,16 +398,16 @@ object Sendere {
         return deflated
     }
 
-    fun sendErrorMessage(user: RemoteUser, flags: Byte, type: RemoteErrorPacket.ErrorType): Boolean {
-        return sendErrorMessage(user, flags, type, null)
+    private fun sendErrorMessage(user: RemoteUser, type: RemoteErrorPacket.ErrorType): Boolean {
+        return sendErrorMessage(user, type, null)
     }
 
-    fun sendErrorMessage(user: RemoteUser, flags: Byte, type: RemoteErrorPacket.ErrorType, errorMessage: String?): Boolean {
-        return sendMessage(user, flags, Any.pack(RemoteErrorPacket.newBuilder().setErrorType(type)
+    private fun sendErrorMessage(user: RemoteUser, type: RemoteErrorPacket.ErrorType, errorMessage: String?): Boolean {
+        return sendMessage(user, RemoteErrorPacket.newBuilder().setErrorType(type)
             .also {
                 if (errorMessage != null)
                     it.extraMessage = errorMessage
-            }.build()).toByteArray())
+            }.build())
     }
 
     private fun onRemoteErrorReceived(remoteUser: RemoteUser, errorType: RemoteErrorPacket.ErrorType, extraMessage: String?) {
@@ -451,7 +420,7 @@ object Sendere {
     /**
      * Calls when updated some remote user info (e.g. add new IP address)
      *
-     * @param user remote user whose info updated
+     * @param remoteUser remote user whose info updated
      */
     private fun onRemoteUserUpdated(remoteUser: RemoteUser) {
         val iterator = eventListeners.iterator()
@@ -463,7 +432,7 @@ object Sendere {
     /**
      * Calls when new remote user connected to local network and declared itself
      *
-     * @param user connected user
+     * @param remoteUser connected user
      */
     private fun onRemoteUserConnected(remoteUser: RemoteUser) {
         val iterator = eventListeners.iterator()
@@ -475,7 +444,7 @@ object Sendere {
     /**
      * Calls when already connected user was found by Sendere
      *
-     * @param user found user
+     * @param remoteUser found user
      */
     private fun onRemoteUserFound(remoteUser: RemoteUser) {
         val iterator = eventListeners.iterator()
@@ -487,7 +456,7 @@ object Sendere {
     /**
      * Calls when some text data received
      *
-     * @param user     remote user who send message
+     * @param remoteUser     remote user who send message
      * @param message message content
      */
     private fun onTextMessageReceived(remoteUser: RemoteUser, message: String) {
@@ -512,7 +481,7 @@ object Sendere {
     private fun onSendResponseReceived(remoteUser: RemoteUser, transmissionOut: TransmissionOut, allow: Boolean) {
         val iterator = eventListeners.iterator()
         while (iterator.hasNext()) {
-            iterator.next().onSendResponseReceived(remoteUser,transmissionOut, allow)
+            iterator.next().onSendResponseReceived(remoteUser, transmissionOut, allow)
         }
     }
 
@@ -527,7 +496,7 @@ object Sendere {
         val thread = Thread {
             while (allowReceiving) {
                 try {
-                    val unidentifiedUser: RemoteUser = object : RemoteUser(serverSocket!!.accept()) {
+                    object : RemoteUser(serverSocket!!.accept()) {
                         override fun onDisconnected() {
                             onRemoteUserDisconnected(this)
                             remoteUsers.removeByHash(hash)
@@ -552,14 +521,14 @@ object Sendere {
             .setEncodedPublicKey(ByteString.copyFrom(alicePubKeyEnc))
             .setSenderGeneratedSecret(false)
             .build()
-        sendMessage(remoteUser, diffieHellmanPacket)
+        sendMessage(remoteUser, diffieHellmanPacket, PacketFlags.NO_FLAGS)
     }
 
     var stopNeighbourRead = false
 
     private fun readNeighbourTable(): HashSet<ArpEntry> {
         val addressList = HashSet<ArpEntry>()
-        var p: Process? = null
+        val p: Process?
         try {
             println("Running ip neigh")
             p = Runtime.getRuntime().exec("ip neigh")
@@ -611,11 +580,7 @@ object Sendere {
             remoteUsers.add(new RemoteUser(getNickname(), hash, address, port));
     }*/
 
-    fun sendMessage(remoteUser: RemoteUser, header: Byte, data: ByteArray): Boolean {
-        return remoteUser.sendMessage(header, data)
-    }
-
-    fun sendMessage(remoteUser: RemoteUser, flags: Byte, packet: Message): Boolean {
+    fun sendMessage(remoteUser: RemoteUser, packet: Message, flags: Byte): Boolean {
         var flags = flags
         var anyBytes = Any.pack(packet).toByteArray()
         if (flags and 1 != 0.toByte()) {
@@ -623,14 +588,17 @@ object Sendere {
             if (deflated.size < anyBytes.size) {
                 anyBytes = deflated
             } else {
-                flags = 0
+                flags = flags and 0b11111110.toByte()
             }
+        }
+        if (flags and 2 != 0.toByte()) {
+            anyBytes = remoteUser.encrypt(anyBytes)
         }
         return remoteUser.sendMessage(flags, anyBytes)
     }
 
     fun sendMessage(remoteUser: RemoteUser, message: Message): Boolean {
-        return sendMessage(remoteUser, DEFAULT_FLAGS, message)
+        return sendMessage(remoteUser, message, PacketFlags.DEFAULT_FLAGS)
     }
 
     /*    public RemoteUser findRemoteUserByAddress(String address) {
@@ -645,12 +613,12 @@ object Sendere {
     fun processSendRequest(allow: Boolean, transmission: TransmissionIn) {
         if (allow) transmissionsIn[transmission.id] = transmission
         sendMessage(
-            transmission.user, 0.toByte(), SendResponsePacket.newBuilder().setAccepted(allow)
+            transmission.user, SendResponsePacket.newBuilder().setAccepted(allow)
                 .setTransmissionId(transmission.id).build()
         )
         if (!inRequests.isEmpty()) {
             currentInRequest = inRequests.removeLast()!!
-            onSendRequestReceived(currentInRequest!!.who, currentInRequest!!)
+            onSendRequestReceived(currentInRequest.who, currentInRequest)
         } else {
             userReady = true
         }
@@ -658,7 +626,7 @@ object Sendere {
 
     fun createRemoteDirectory(relativePath: String?, transmission: TransmissionOut): Boolean {
         return sendMessage(
-            transmission.user, 0.toByte(), CreateDirectoryPacket.newBuilder()
+            transmission.user, CreateDirectoryPacket.newBuilder()
                 .setFileName(relativePath)
                 .setTransmissionId(transmission.id)
                 .build()
@@ -667,7 +635,7 @@ object Sendere {
 
     fun createRemoteFile(relativePath: String?, transmission: TransmissionOut): Boolean {
         return sendMessage(
-            transmission.user, 0.toByte(), CreateFilePacket.newBuilder()
+            transmission.user, CreateFilePacket.newBuilder()
                 .setFileName(relativePath)
                 .setTransmissionId(transmission.id)
                 .build()
@@ -680,7 +648,7 @@ object Sendere {
 
     fun sendTransmissionRequest(transmission: TransmissionOut): Boolean {
         return sendMessage(
-            transmission.user, 0.toByte(), SendRequestPacket.newBuilder()
+            transmission.user, SendRequestPacket.newBuilder()
                 .setFileName(transmission.filename)
                 .setIsDirectory(transmission.isDirectory)
                 .setTransmissionId(transmission.id)
@@ -689,7 +657,7 @@ object Sendere {
     }
 
     fun sendTextMessage(user: RemoteUser, message: String?): Boolean {
-        return sendMessage(user, 0.toByte(), TextPacket.newBuilder().setText(message).build())
+        return sendMessage(user, TextPacket.newBuilder().setText(message).build())
     }
 
     init {
@@ -730,19 +698,12 @@ object Sendere {
                             this@Sendere.onReceive(this, flags, data)
                         }
                     }
-                    sendMessage(
-                        unidentifiedUser,
-                        0.toByte(),
-                        PingPacket.newBuilder().setSuid(SUID).setNickname(nickname).build()
-                    )
+                    sendMessage(unidentifiedUser, PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
+                        .setShouldAnswer(true)
+                        .build(), PacketFlags.NO_FLAGS)
                 }
             }
         }
         clientDiscover.start()
-    }
-
-    private fun getProtobufPacketType(anyPacket: Any): Class<Message>? {
-        // TODO: huku 30.08.2021 stub
-        return null
     }
 }

@@ -195,7 +195,7 @@ class Main {
                     Sendere.sendTextMessage(tempUser, split[2])
                     println("Сообщение отправлено")
                     if (!Settings.allowChat) println("Обратите внимание, что ваши настройки запрещают приём текстовых сообщений, а значит вы не сможете получить ответ")
-                } else if (line.startsWith("speed ") && line.split(" ".toRegex()).toTypedArray().size == 2) {
+                } else if (line.startsWith("speed ") && line.split(" ".toRegex()).toTypedArray().size == 3) {
                     val split = line.split(" ".toRegex(), 3).toTypedArray()
                     var tempUser: RemoteUser?
                     try {
@@ -210,8 +210,8 @@ class Main {
                     val endTime = System.currentTimeMillis() + testDuration * 1000
                     var packetsSend = 0
                     while (System.currentTimeMillis() < endTime) {
-                        Sendere.sendMessage(tempUser, 4.toByte(), RawDataPacket.newBuilder().setTransmissionId(0)
-                                .setData(ByteString.copyFrom(ByteArray(1048572))).build())
+                        Sendere.sendMessage(tempUser, RawDataPacket.newBuilder().setTransmissionId(0)
+                                .setData(ByteString.copyFrom(ByteArray(1048572))).build(),Integer.parseInt(split[2]).toByte())
                         packetsSend++
                     }
                     println(String.format("Средняя скорость соединения с пользователем %.2f МБ/с", packetsSend.toFloat() / testDuration))
@@ -237,7 +237,7 @@ class Main {
                             println("start")
                             deflater.setStrategy(Deflater.HUFFMAN_ONLY)
                             recursiveSend(filename)
-                            Sendere.sendMessage(user, 0.toByte(), TransmissionControlPacket.newBuilder()
+                            Sendere.sendMessage(user, TransmissionControlPacket.newBuilder()
                                     .setSignal(TransmissionControlPacket.Signal.SENDING_COMPLETE)
                                     .setTransmissionId(this.id)
                                     .build())
@@ -268,19 +268,19 @@ class Main {
                                     val `in` = FileInputStream(file)
                                     val data = ByteArray(1024 * 1024 / 8)
                                     var dataLength: Int
-                                    var flags: Byte = 0
+                                    var flags: Byte = Sendere.PacketFlags.DEFAULT_FLAGS
                                     while (`in`.read(data).also { dataLength = it } != -1) {
                                         // TODO: 16.04.2021 add GZip support, huku
                                         if (Settings.allowGzip) {
-                                            flags = flags or 1
+                                            flags = flags or Sendere.PacketFlags.COMPRESSED
                                         }
-                                        Sendere.sendMessage(user, flags, RawDataPacket.newBuilder()
+                                        Sendere.sendMessage(user, RawDataPacket.newBuilder()
                                                 .setTransmissionId(this.id)
                                                 .setData(ByteString.copyFrom(data, 0, dataLength))
-                                                .build())
+                                                .build(),flags)
                                         if (stop) return
                                     }
-                                    Sendere.sendMessage(user, 0.toByte(), CloseFilePacket.newBuilder().setTransmissionId(this.id).build())
+                                    Sendere.sendMessage(user, CloseFilePacket.newBuilder().setTransmissionId(this.id).build())
                                     //Sendere.sendMessage(user, Headers.CLOSE_FILE, String.valueOf(id));
                                 } catch (e: IOException) {
                                     e.printStackTrace()

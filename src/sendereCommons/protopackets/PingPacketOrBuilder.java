@@ -26,14 +26,8 @@ public interface PingPacketOrBuilder extends
       getNicknameBytes();
 
   /**
-   * <code>bool supportGzip = 3;</code>
-   * @return The supportGzip.
+   * <code>bool shouldAnswer = 3;</code>
+   * @return The shouldAnswer.
    */
-  boolean getSupportGzip();
-
-  /**
-   * <code>bool supportEncryption = 4;</code>
-   * @return The supportEncryption.
-   */
-  boolean getSupportEncryption();
+  boolean getShouldAnswer();
 }

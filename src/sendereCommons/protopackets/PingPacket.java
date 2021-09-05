@@ -62,12 +62,7 @@ private static final long serialVersionUID = 0L;
           }
           case 24: {
 
-            supportGzip_ = input.readBool();
-            break;
-          }
-          case 32: {
-
-            supportEncryption_ = input.readBool();
+            shouldAnswer_ = input.readBool();
             break;
           }
           default: {
@@ -151,26 +146,15 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int SUPPORTGZIP_FIELD_NUMBER = 3;
-  private boolean supportGzip_;
+  public static final int SHOULDANSWER_FIELD_NUMBER = 3;
+  private boolean shouldAnswer_;
   /**
-   * <code>bool supportGzip = 3;</code>
-   * @return The supportGzip.
+   * <code>bool shouldAnswer = 3;</code>
+   * @return The shouldAnswer.
    */
   @java.lang.Override
-  public boolean getSupportGzip() {
-    return supportGzip_;
-  }
-
-  public static final int SUPPORTENCRYPTION_FIELD_NUMBER = 4;
-  private boolean supportEncryption_;
-  /**
-   * <code>bool supportEncryption = 4;</code>
-   * @return The supportEncryption.
-   */
-  @java.lang.Override
-  public boolean getSupportEncryption() {
-    return supportEncryption_;
+  public boolean getShouldAnswer() {
+    return shouldAnswer_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -193,11 +177,8 @@ private static final long serialVersionUID = 0L;
     if (!getNicknameBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, nickname_);
     }
-    if (supportGzip_ != false) {
-      output.writeBool(3, supportGzip_);
-    }
-    if (supportEncryption_ != false) {
-      output.writeBool(4, supportEncryption_);
+    if (shouldAnswer_ != false) {
+      output.writeBool(3, shouldAnswer_);
     }
     unknownFields.writeTo(output);
   }
@@ -215,13 +196,9 @@ private static final long serialVersionUID = 0L;
     if (!getNicknameBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, nickname_);
     }
-    if (supportGzip_ != false) {
+    if (shouldAnswer_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(3, supportGzip_);
-    }
-    if (supportEncryption_ != false) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(4, supportEncryption_);
+        .computeBoolSize(3, shouldAnswer_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -242,10 +219,8 @@ private static final long serialVersionUID = 0L;
         != other.getSuid()) return false;
     if (!getNickname()
         .equals(other.getNickname())) return false;
-    if (getSupportGzip()
-        != other.getSupportGzip()) return false;
-    if (getSupportEncryption()
-        != other.getSupportEncryption()) return false;
+    if (getShouldAnswer()
+        != other.getShouldAnswer()) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -262,12 +237,9 @@ private static final long serialVersionUID = 0L;
         getSuid());
     hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
     hash = (53 * hash) + getNickname().hashCode();
-    hash = (37 * hash) + SUPPORTGZIP_FIELD_NUMBER;
+    hash = (37 * hash) + SHOULDANSWER_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getSupportGzip());
-    hash = (37 * hash) + SUPPORTENCRYPTION_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getSupportEncryption());
+        getShouldAnswer());
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -405,9 +377,7 @@ private static final long serialVersionUID = 0L;
 
       nickname_ = "";
 
-      supportGzip_ = false;
-
-      supportEncryption_ = false;
+      shouldAnswer_ = false;
 
       return this;
     }
@@ -437,8 +407,7 @@ private static final long serialVersionUID = 0L;
       sendereCommons.protopackets.PingPacket result = new sendereCommons.protopackets.PingPacket(this);
       result.suid_ = suid_;
       result.nickname_ = nickname_;
-      result.supportGzip_ = supportGzip_;
-      result.supportEncryption_ = supportEncryption_;
+      result.shouldAnswer_ = shouldAnswer_;
       onBuilt();
       return result;
     }
@@ -494,11 +463,8 @@ private static final long serialVersionUID = 0L;
         nickname_ = other.nickname_;
         onChanged();
       }
-      if (other.getSupportGzip() != false) {
-        setSupportGzip(other.getSupportGzip());
-      }
-      if (other.getSupportEncryption() != false) {
-        setSupportEncryption(other.getSupportEncryption());
+      if (other.getShouldAnswer() != false) {
+        setShouldAnswer(other.getShouldAnswer());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -636,64 +602,33 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private boolean supportGzip_ ;
+    private boolean shouldAnswer_ ;
     /**
-     * <code>bool supportGzip = 3;</code>
-     * @return The supportGzip.
+     * <code>bool shouldAnswer = 3;</code>
+     * @return The shouldAnswer.
      */
     @java.lang.Override
-    public boolean getSupportGzip() {
-      return supportGzip_;
+    public boolean getShouldAnswer() {
+      return shouldAnswer_;
     }
     /**
-     * <code>bool supportGzip = 3;</code>
-     * @param value The supportGzip to set.
+     * <code>bool shouldAnswer = 3;</code>
+     * @param value The shouldAnswer to set.
      * @return This builder for chaining.
      */
-    public Builder setSupportGzip(boolean value) {
+    public Builder setShouldAnswer(boolean value) {
       
-      supportGzip_ = value;
+      shouldAnswer_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bool supportGzip = 3;</code>
+     * <code>bool shouldAnswer = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearSupportGzip() {
+    public Builder clearShouldAnswer() {
       
-      supportGzip_ = false;
-      onChanged();
-      return this;
-    }
-
-    private boolean supportEncryption_ ;
-    /**
-     * <code>bool supportEncryption = 4;</code>
-     * @return The supportEncryption.
-     */
-    @java.lang.Override
-    public boolean getSupportEncryption() {
-      return supportEncryption_;
-    }
-    /**
-     * <code>bool supportEncryption = 4;</code>
-     * @param value The supportEncryption to set.
-     * @return This builder for chaining.
-     */
-    public Builder setSupportEncryption(boolean value) {
-      
-      supportEncryption_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>bool supportEncryption = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearSupportEncryption() {
-      
-      supportEncryption_ = false;
+      shouldAnswer_ = false;
       onChanged();
       return this;
     }

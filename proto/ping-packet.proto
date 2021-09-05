@@ -19,16 +19,7 @@ message IdentificationPacket {
 message PingPacket {
     int64 suid = 1;
     string nickname = 2;
-    bool supportGzip = 3;
-    bool supportEncryption = 4;
-}
-
-
-message PongPacket {
-    int64 suid = 1;
-    string nickname = 2;
-    bool supportGzip = 3;
-    bool supportEncryption = 4;
+    bool shouldAnswer = 3;
 }
 
 message RemoteErrorPacket {
