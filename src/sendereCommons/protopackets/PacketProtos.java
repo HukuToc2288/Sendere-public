@@ -84,6 +84,11 @@ public final class PacketProtos {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_EncryptionCheckPacket_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_SignedPacket_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_SignedPacket_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -125,8 +130,10 @@ public final class PacketProtos {
       "Secret\030\002 \001(\010\022\017\n\002iv\030\003 \001(\014H\000\210\001\001B\005\n\003_iv\"S\n\025" +
       "EncryptionCheckPacket\022\021\n\tencrypted\030\001 \001(\014" +
       "\022\021\n\tcleartext\030\002 \001(\014\022\024\n\014senderTrusts\030\003 \001(" +
-      "\010B-\n\033sendereCommons.protopacketsB\014Packet" +
-      "ProtosP\001b\006proto3"
+      "\010\"J\n\014SignedPacket\022\031\n\021nestedPacketBytes\030\001" +
+      " \001(\014\022\014\n\004salt\030\002 \001(\014\022\021\n\tsignature\030\003 \001(\014B-\n" +
+      "\033sendereCommons.protopacketsB\014PacketProt" +
+      "osP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -216,6 +223,12 @@ public final class PacketProtos {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_EncryptionCheckPacket_descriptor,
         new java.lang.String[] { "Encrypted", "Cleartext", "SenderTrusts", });
+    internal_static_SignedPacket_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_SignedPacket_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_SignedPacket_descriptor,
+        new java.lang.String[] { "NestedPacketBytes", "Salt", "Signature", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

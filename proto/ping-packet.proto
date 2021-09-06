@@ -92,3 +92,11 @@ message EncryptionCheckPacket {
     bytes cleartext = 2;
     bool senderTrusts = 3;
 }
+
+message SignedPacket {
+    bytes nestedPacketBytes = 1;
+    bytes salt = 2;
+    bytes signature = 3;
+}
+
+

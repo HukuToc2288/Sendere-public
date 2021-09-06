@@ -8,6 +8,7 @@ import lombok.SneakyThrows
 import sendereCommons.Settings.nickname
 import sendereCommons.Settings.visibility
 import sendereCommons.protopackets.*
+import testificate.SigningUtils
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -129,9 +130,9 @@ object Sendere {
                 if (shouldAnswer) {
                     onRemoteUserConnected(sender)
                     if (visibility == 1) {
-                        sendMessage(sender, PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
+                        sendMessage(sender, SigningUtils.makeSignedPacket(PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
                             .setShouldAnswer(false)
-                            .build(), PacketFlags.NO_FLAGS)
+                            .build()), PacketFlags.NO_FLAGS)
                     }
                 } else {
                     onRemoteUserFound(sender)
@@ -325,6 +326,21 @@ object Sendere {
                 println("Holy cow, it works!");
             } else {
                 println("As expected, it doesn't work")
+            }
+        } else if (anyPacket.`is`(SignedPacket::class.java)) {
+            val packetType = SignedPacket::class.java
+            val packet = anyPacket.unpackOrNull(packetType) ?: run {
+                sendInvalidFormatErrorMessage(sender, packetType)
+                return
+            }
+            val nestedPacketBytes = packet.nestedPacketBytes.toByteArray()
+            val isSignatureCorrect = SigningUtils.verifyData(packet.signature.toByteArray(), nestedPacketBytes, packet.salt.toByteArray())
+            if (!isSignatureCorrect) {
+                // TODO: huku 06.09.2021 signature error
+            } else {
+                // process nested packet
+                    // 06.09.2021 huku
+                onReceive(sender, flags, nestedPacketBytes)
             }
         } else {
             sendErrorMessage(
@@ -698,9 +714,9 @@ object Sendere {
                             this@Sendere.onReceive(this, flags, data)
                         }
                     }
-                    sendMessage(unidentifiedUser, PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
+                    sendMessage(unidentifiedUser, SigningUtils.makeSignedPacket(PingPacket.newBuilder().setSuid(SUID).setNickname(nickname)
                         .setShouldAnswer(true)
-                        .build(), PacketFlags.NO_FLAGS)
+                        .build()), PacketFlags.NO_FLAGS)
                 }
             }
         }
